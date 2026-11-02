@@ -7,15 +7,19 @@
     <title>BrightCart — Premium Tech Store</title>
 
     <!-- ── Security headers (meta-tag equivalents) ── -->
+    <!-- Paystack Inline Popup JS -->
+    <script src="https://js.paystack.co/v1/inline.js"></script>
+
     <!-- Content Security Policy: restrict resource origins -->
     <meta http-equiv="Content-Security-Policy"
       content="
         default-src 'self';
-        script-src 'self' 'unsafe-inline' 'unsafe-eval';
+        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.paystack.co;
         style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
         font-src 'self' https://fonts.gstatic.com;
         img-src 'self' data: blob: https:;
-        connect-src 'self' https://open.er-api.com http://localhost:5000 http://127.0.0.1:5000;
+        connect-src 'self' https://open.er-api.com https://api.paystack.co http://localhost:5000 http://127.0.0.1:5000;
+        frame-src https://checkout.paystack.com;
         frame-ancestors 'none';
       "
     />
