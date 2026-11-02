@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BrightCart — Premium Tech Store</title>
+
+    <!-- ── Security headers (meta-tag equivalents) ── -->
+    <!-- Content Security Policy: restrict resource origins -->
+    <meta http-equiv="Content-Security-Policy"
+      content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' 'unsafe-eval';
+        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+        font-src 'self' https://fonts.gstatic.com;
+        img-src 'self' data: blob: https:;
+        connect-src 'self' https://open.er-api.com;
+        frame-ancestors 'none';
+      "
+    />
+    <!-- Prevent MIME sniffing -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <!-- Block clickjacking -->
+    <meta http-equiv="X-Frame-Options" content="DENY" />
+    <!-- Don't send Referer to external sites -->
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
