@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import { api } from '../utils/api';
 import {
   hashPassword,
   SUPER_ADMIN_HASH,
@@ -77,6 +78,23 @@ export function StoreProvider({ children }) {
   const [page, setPage] = useState(() => sessionGet('brightcart_page', 'home'));
   const [pageParams, setPageParams] = useState(() => sessionGet('brightcart_page_params', {}));
 
+  // Fetch real-time products & orders from backend MongoDB
+  useEffect(() => {
+    let active = true;
+    async function loadData() {
+      const serverProducts = await api.getProducts();
+      if (active && serverProducts && serverProducts.length > 0) {
+        setProducts(serverProducts);
+      }
+      const serverOrders = await api.getOrders();
+      if (active && serverOrders) {
+        setOrders(serverOrders);
+      }
+    }
+    loadData();
+    return () => { active = false; };
+  }, []);
+
   // Keep page routing in sessionStorage
   useEffect(() => { sessionSet('brightcart_page', page); }, [page]);
   useEffect(() => { sessionSet('brightcart_page_params', pageParams); }, [pageParams]);
@@ -137,7 +155,7 @@ export function StoreProvider({ children }) {
     }
   }, []);
 
-  const placeOrder = useCallback((orderData) => {
+  const placeOrder = useCallback(async (orderData) => {
     const newOrder = {
       id: `ORD-${Date.now()}`,
       ...sanitizeObject(orderData),
@@ -147,6 +165,8 @@ export function StoreProvider({ children }) {
       date: new Date().toLocaleDateString(),
       customer: user?.name || orderData.name,
     };
+    // Sync with backend MongoDB
+    api.placeOrder(newOrder);
     setOrders(prev => [newOrder, ...prev]);
     setCart([]);
     return newOrder;
@@ -232,8 +252,9 @@ export function StoreProvider({ children }) {
   }, []);
 
   // ── Admin: product CRUD (inputs sanitised) ───────────────────────────────────
-  const addProduct = useCallback((data) => {
+  const addProduct = useCallback(async (data) => {
     const newProd = { ...sanitizeObject(data), id: `prod-${Date.now()}` };
+    api.addProduct(newProd);
     setProducts(prev => [newProd, ...prev]);
   }, []);
 
