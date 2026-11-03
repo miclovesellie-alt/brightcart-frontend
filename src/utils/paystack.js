@@ -6,13 +6,18 @@ export function payWithPaystack({
   email,
   amount,          // amount in standard units (e.g. 50 USD or 650 GHS)
   currency = 'GHS',
-  publicKey = 'pk_test_sample_brightcart_ghana', // Replace with your Paystack Public Key
+  publicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || '',
   onSuccess,
   onClose,
+  onError,
 }) {
+  if (!publicKey) {
+    onError?.('Paystack is not configured. Set VITE_PAYSTACK_PUBLIC_KEY to the public key from your Paystack dashboard.');
+    return false;
+  }
   if (typeof window.PaystackPop === 'undefined') {
-    alert('Paystack SDK is loading. Please check your internet connection or try again.');
-    return;
+    onError?.('Paystack SDK is not available. Check your internet connection and try again.');
+    return false;
   }
 
   // Paystack expects amount in pesewas/kobo/cents (multiply by 100)
@@ -46,4 +51,5 @@ export function payWithPaystack({
   });
 
   handler.openIframe();
+  return true;
 }

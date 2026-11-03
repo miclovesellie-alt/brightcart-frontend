@@ -18,10 +18,19 @@ import AdminAnalytics from './pages/admin/AdminAnalytics';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminSuppliers from './pages/admin/AdminSuppliers';
 import AdminUsers from './pages/admin/AdminUsers';
+import AIDropshipping from './pages/admin/AIDropshipping';
 
-const ADMIN_PAGES = ['admin', 'admin-dashboard', 'admin-products', 'admin-orders', 'admin-customers', 'admin-analytics', 'admin-settings', 'admin-suppliers', 'admin-users'];
+const ADMIN_PAGES = ['admin', 'admin-dashboard', 'admin-products', 'admin-orders', 'admin-customers', 'admin-analytics', 'admin-settings', 'admin-suppliers', 'admin-users', 'admin-dropshipping'];
 
 const ADMIN_ROLES = ['super_admin', 'admin', 'moderator'];
+const PAGE_ROLES = {
+  'admin-products': ['super_admin', 'admin'],
+  'admin-analytics': ['super_admin', 'admin'],
+  'admin-settings': ['super_admin'],
+  'admin-suppliers': ['super_admin'],
+  'admin-users': ['super_admin'],
+  'admin-dropshipping': ['super_admin', 'admin'],
+};
 
 function AppContent() {
   const { page, user, navigate } = useStore();
@@ -33,6 +42,11 @@ function AppContent() {
     if (!user || !ADMIN_ROLES.includes(user.role)) {
       // Not authenticated as admin — bounce to account/login
       setTimeout(() => navigate('account'), 0);
+      return null;
+    }
+    const allowedRoles = PAGE_ROLES[page];
+    if (allowedRoles && !allowedRoles.includes(user.role)) {
+      setTimeout(() => navigate('admin-dashboard'), 0);
       return null;
     }
     const activePage = page === 'admin' ? 'admin-dashboard' : page;
@@ -47,6 +61,7 @@ function AppContent() {
         case 'admin-settings': return <AdminSettings />;
         case 'admin-suppliers': return <AdminSuppliers />;
         case 'admin-users': return <AdminUsers />;
+        case 'admin-dropshipping': return <AIDropshipping />;
         default: return <AdminDashboard />;
       }
     };

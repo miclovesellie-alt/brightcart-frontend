@@ -84,7 +84,7 @@ export default function AdminUsers() {
     const errors = {};
     if (!addForm.name.trim()) errors.name = 'Name required';
     if (!addForm.email.includes('@')) errors.email = 'Valid email required';
-    if (addForm.password.length < 6) errors.password = 'Min 6 characters';
+    if (addForm.password.length < 10) errors.password = 'Min 10 characters';
     if (adminUsers.find(a => a.email === addForm.email)) errors.email = 'Email already exists';
     if (Object.keys(errors).length) { setAddErrors(errors); return; }
 
@@ -351,7 +351,7 @@ export default function AdminUsers() {
             {[
               { key: 'name', label: 'Full Name', type: 'text', placeholder: 'e.g. John Doe' },
               { key: 'email', label: 'Email Address', type: 'email', placeholder: 'e.g. john@example.com' },
-              { key: 'password', label: 'Temporary Password', type: 'password', placeholder: 'Min 6 characters' },
+              { key: 'password', label: 'Temporary Password', type: 'password', placeholder: 'Min 10 characters' },
             ].map(({ key, label, type, placeholder }) => (
               <div key={key} style={{ marginBottom: 14 }}>
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151', marginBottom: 5, letterSpacing: '0.04em' }}>{label.toUpperCase()}</label>

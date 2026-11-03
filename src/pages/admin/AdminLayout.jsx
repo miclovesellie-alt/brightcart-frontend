@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   LayoutDashboard, Package, ShoppingBag, Users, BarChart2,
-  Settings, LogOut, Zap, Menu, X, Truck, Bell, Search,
+  Settings, LogOut, Zap, Menu, X, Truck, Bell, Search, Sparkles,
   ChevronRight, Store, UserCheck, ShieldCheck, Shield, Eye,
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
@@ -11,6 +11,7 @@ const ALL_NAV = [
   { label: 'Dashboard',  icon: LayoutDashboard, page: 'admin-dashboard',  badge: null,  roles: ['super_admin','admin','moderator'] },
   { label: 'Orders',     icon: ShoppingBag,     page: 'admin-orders',     badge: '12',  roles: ['super_admin','admin','moderator'] },
   { label: 'Products',   icon: Package,         page: 'admin-products',   badge: null,  roles: ['super_admin','admin'] },
+  { label: 'AI Dropshipping', icon: Sparkles,    page: 'admin-dropshipping', badge: null, roles: ['super_admin','admin'] },
   { label: 'Suppliers',  icon: Truck,           page: 'admin-suppliers',  badge: null,  roles: ['super_admin'] },
   { label: 'Customers',  icon: Users,           page: 'admin-customers',  badge: null,  roles: ['super_admin','admin','moderator'] },
   { label: 'Analytics',  icon: BarChart2,       page: 'admin-analytics',  badge: null,  roles: ['super_admin','admin'] },

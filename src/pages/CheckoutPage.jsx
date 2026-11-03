@@ -29,6 +29,7 @@ export default function CheckoutPage() {
   const [step, setStep] = useState(1);
   const [orderPlaced, setOrderPlaced] = useState(null);
   const [processing, setProcessing] = useState(false);
+  const [checkoutError, setCheckoutError] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('paystack'); // 'paystack' (MoMo/Card) or 'cash'
 
   const [shipping, setShipping] = useState({
@@ -54,40 +55,56 @@ export default function CheckoutPage() {
   // Paystack Flow trigger
   const handlePaystackCheckout = () => {
     if (!shipping.name || !shipping.email || !shipping.address) {
-      alert('Please fill in your shipping details first.');
+      setCheckoutError('Please fill in your shipping details first.');
       setStep(1);
       return;
     }
 
     setProcessing(true);
+    setCheckoutError('');
 
     payWithPaystack({
       email: shipping.email,
       amount: paystackAmount,
       currency: paystackCurrency,
-      onSuccess: (res) => {
-        setProcessing(false);
-        const order = placeOrder({
-          ...shipping,
-          paymentMethod: 'Paystack (MoMo/Card)',
-          paymentRef: res.reference,
-          status: 'Processing',
-        });
-        setOrderPlaced(order);
+      onSuccess: async (res) => {
+        try {
+          const order = await placeOrder({
+            ...shipping,
+            paymentMethod: 'Paystack (MoMo/Card)',
+            paymentRef: res.reference,
+          });
+          setOrderPlaced(order);
+        } catch (error) {
+          setCheckoutError(`Payment callback received, but the order could not be saved. Keep reference ${res.reference} and contact support. ${error.message}`);
+        } finally {
+          setProcessing(false);
+        }
       },
       onClose: () => {
+        setProcessing(false);
+      },
+      onError: error => {
+        setCheckoutError(error);
         setProcessing(false);
       },
     });
   };
 
-  const handleManualOrder = () => {
-    const order = placeOrder({
-      ...shipping,
-      paymentMethod: 'Pay on Delivery / Bank Transfer',
-      status: 'Pending',
-    });
-    setOrderPlaced(order);
+  const handleManualOrder = async () => {
+    setProcessing(true);
+    setCheckoutError('');
+    try {
+      const order = await placeOrder({
+        ...shipping,
+        paymentMethod: 'Pay on Delivery / Bank Transfer',
+      });
+      setOrderPlaced(order);
+    } catch (error) {
+      setCheckoutError(error.message || 'Unable to place this order. Try again.');
+    } finally {
+      setProcessing(false);
+    }
   };
 
   if (orderPlaced) {
@@ -103,9 +120,11 @@ export default function CheckoutPage() {
           }}>
             <CheckCircle size={40} color="#22c55e" />
           </div>
-          <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>Payment Successful! 🎉</h1>
+          <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>Order received</h1>
           <p style={{ color: '#8892a4', marginBottom: '12px', fontSize: '15px' }}>
-            Thank you for shopping with BrightCart. Your transaction has been recorded.
+            {orderPlaced.paymentStatus === 'pending_verification'
+              ? 'Paystack returned a reference. A super admin must verify it against Paystack before fulfillment.'
+              : 'Your order is recorded as unpaid. We will confirm payment before fulfillment.'}
           </p>
           <div style={{ background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)', marginBottom: '24px', textAlign: 'left' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
@@ -118,6 +137,10 @@ export default function CheckoutPage() {
                 <span style={{ fontFamily: 'monospace', color: '#22c55e', fontSize: '13px' }}>{orderPlaced.paymentRef}</span>
               </div>
             )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <span style={{ color: '#64748b', fontSize: '13px' }}>Payment status:</span>
+              <span style={{ color: '#f59e0b', fontWeight: 700, fontSize: '13px', textTransform: 'capitalize' }}>{String(orderPlaced.paymentStatus || 'unpaid').replaceAll('_', ' ')}</span>
+            </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#64748b', fontSize: '13px' }}>Total Amount:</span>
               <span style={{ color: '#fff', fontWeight: 800, fontSize: '14px' }}>{format(totalUSD)}</span>
@@ -181,6 +204,12 @@ export default function CheckoutPage() {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '32px', alignItems: 'start' }}>
+
+          {checkoutError && (
+            <div role="alert" style={{ gridColumn: '1 / -1', padding: '12px 16px', borderRadius: 10, color: '#fecaca', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', fontSize: 13 }}>
+              {checkoutError}
+            </div>
+          )}
           
           {/* Main Form Body */}
           <div className="glass" style={{ borderRadius: '20px', padding: '32px' }}>

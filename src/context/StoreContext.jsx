@@ -1,15 +1,11 @@
-import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { api } from '../utils/api';
 import {
-  hashPassword,
-  SUPER_ADMIN_HASH,
   sanitizeObject,
-  createSessionToken,
   resolveSessionToken,
+  getSessionToken,
+  saveSession,
   destroySessionToken,
-  recordFailedAttempt,
-  recordSuccessfulLogin,
-  isLockedOut,
   startIdleWatchdog,
   stopIdleWatchdog,
 } from '../utils/security';
@@ -71,44 +67,84 @@ const INITIAL_PRODUCTS = [
 
 export function StoreProvider({ children }) {
   const [products, setProducts] = useState(INITIAL_PRODUCTS);
+  const [adminProducts, setAdminProducts] = useState([]);
   const [cart, setCart] = useState([]);
-  // Restore user from secure session token; restore page from sessionStorage
+  // The cached user is for immediate rendering; /auth/me validates the server session on load.
   const [user, setUserState] = useState(() => resolveSessionToken());
   const [orders, setOrders] = useState([]);
+  const [adminUsers, setAdminUsers] = useState([]);
   const [page, setPage] = useState(() => sessionGet('brightcart_page', 'home'));
   const [pageParams, setPageParams] = useState(() => sessionGet('brightcart_page_params', {}));
 
-  // Fetch real-time products & orders from backend MongoDB
+  // The public catalog never includes draft products.
   useEffect(() => {
     let active = true;
-    async function loadData() {
-      const serverProducts = await api.getProducts();
-      if (active && serverProducts && serverProducts.length > 0) {
-        setProducts(serverProducts);
-      }
-      const serverOrders = await api.getOrders();
-      if (active && serverOrders) {
-        setOrders(serverOrders);
-      }
-    }
-    loadData();
+    api.getProducts().then(result => {
+      if (active && Array.isArray(result.data)) setProducts(result.data);
+    }).catch(error => console.warn('Catalog is using its local fallback:', error.message));
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    if (!getSessionToken()) return;
+    let active = true;
+    api.getMe().then(result => {
+      if (active) setUserState(result.user);
+    }).catch(() => {
+      if (active) setUserState(null);
+      destroySessionToken();
+    });
+    return () => { active = false; };
+  }, []);
+
+  // Load only the signed-in user's orders. Admin pages use a separate protected endpoint.
+  useEffect(() => {
+    let active = true;
+    const adminRole = ['super_admin', 'admin', 'moderator'].includes(user?.role);
+    const editorRole = ['super_admin', 'admin'].includes(user?.role);
+    if (!user) {
+      setOrders([]);
+      setAdminProducts([]);
+      setAdminUsers([]);
+      return () => { active = false; };
+    }
+
+    const loadAccountData = async () => {
+      try {
+        if (editorRole) {
+          const [productResult, orderResult] = await Promise.all([api.getAdminProducts(), api.getAdminOrders()]);
+          if (active) {
+            setAdminProducts(productResult.data || []);
+            setOrders(orderResult.data || []);
+          }
+        } else if (adminRole) {
+          const orderResult = await api.getAdminOrders();
+          if (active) setOrders(orderResult.data || []);
+        } else {
+          const orderResult = await api.getAccountOrders();
+          if (active) setOrders(orderResult.data || []);
+        }
+        if (user.role === 'super_admin') {
+          const userResult = await api.getAdminUsers();
+          if (active) setAdminUsers(userResult.data || []);
+        }
+      } catch (error) {
+        if (error.status !== 403) console.warn('Could not load account data:', error.message);
+      }
+    };
+    loadAccountData();
+    return () => { active = false; };
+  }, [user?.id, user?.role]);
 
   // Keep page routing in sessionStorage
   useEffect(() => { sessionSet('brightcart_page', page); }, [page]);
   useEffect(() => { sessionSet('brightcart_page_params', pageParams); }, [pageParams]);
 
-  // Internal setter — always syncs to session token
-  const setUser = useCallback((u) => {
-    if (u) createSessionToken(u);
-    setUserState(u);
-  }, []);
-
   // Start idle watchdog when an admin logs in; stop it on logout
   useEffect(() => {
     if (user && ['super_admin', 'admin', 'moderator'].includes(user.role)) {
       startIdleWatchdog(() => {
+        destroySessionToken();
         setUserState(null);
         sessionSet('brightcart_page', 'home');
         setPage('home');
@@ -156,114 +192,105 @@ export function StoreProvider({ children }) {
   }, []);
 
   const placeOrder = useCallback(async (orderData) => {
-    const newOrder = {
-      id: `ORD-${Date.now()}`,
+    const result = await api.placeOrder({
       ...sanitizeObject(orderData),
-      items: [...cart],
-      total: cart.reduce((sum, item) => sum + item.product.price * item.qty, 0),
-      status: 'Pending',
-      date: new Date().toLocaleDateString(),
+      items: cart,
       customer: user?.name || orderData.name,
-    };
-    // Sync with backend MongoDB
-    api.placeOrder(newOrder);
-    setOrders(prev => [newOrder, ...prev]);
+    });
+    const newOrder = result.data;
+    setOrders(prev => [newOrder, ...prev.filter(order => order.id !== newOrder.id)]);
     setCart([]);
     return newOrder;
   }, [cart, user]);
 
-  // ── Admin team management — passwords stored as SHA-256 hashes ───────────────
-  const [adminUsers, setAdminUsers] = useState([
-    {
-      id: 'sa-1',
-      name: 'Super Admin',
-      email: 'boafokyei3@gmail.com',
-      passwordHash: SUPER_ADMIN_HASH,   // SHA-256('Ky2004ei-' + SALT) — never plaintext
-      role: 'super_admin',
-      createdAt: 'Jan 1, 2026',
-      lastLogin: 'Nov 1, 2026',
-      status: 'Active',
-    },
-  ]);
-
-  const login = useCallback((userData) => {
-    setUser(userData);
-  }, [setUser]);
-
-  // Async: hashes the input password then compares against stored hash
-  const adminLogin = useCallback(async (email, password) => {
-    // Rate-limit check first
-    const lock = isLockedOut();
-    if (lock.locked) return { success: false, locked: true, secondsLeft: lock.secondsLeft };
-
-    const inputHash = await hashPassword(password);
-    const found = adminUsers.find(
-      (a) => a.email === email && a.passwordHash === inputHash && a.status === 'Active'
-    );
-
-    if (found) {
-      recordSuccessfulLogin();
-      const userData = { name: found.name, email: found.email, role: found.role, adminId: found.id };
-      setUser(userData);
-      return { success: true };
-    }
-
-    const result = recordFailedAttempt();
-    return { success: false, ...result };
-  }, [adminUsers, setUser]);
-
-  const addAdminUser = useCallback(async (userData) => {
-    const passwordHash = await hashPassword(userData.password);
-    const safe = sanitizeObject({ ...userData, password: undefined });
-    const newAdmin = {
-      ...safe,
-      passwordHash,
-      id: `admin-${Date.now()}`,
-      createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      lastLogin: 'Never',
-      status: 'Active',
-    };
-    setAdminUsers((prev) => [...prev, newAdmin]);
+  const acceptSession = useCallback((result) => {
+    saveSession(result.token, result.user, result.expiresAt);
+    setUserState(result.user);
+    return result.user;
   }, []);
 
-  const removeAdminUser = useCallback((id) => {
-    setAdminUsers((prev) => prev.filter((a) => a.id !== id));
+  const login = useCallback(async (email, password) => {
+    const result = await api.login(email, password);
+    return acceptSession(result);
+  }, [acceptSession]);
+
+  const register = useCallback(async (userData) => {
+    const result = await api.register(userData);
+    return acceptSession(result);
+  }, [acceptSession]);
+
+  const addAdminUser = useCallback(async (userData) => {
+    const result = await api.addAdminUser(userData);
+    setAdminUsers(prev => [result.data, ...prev]);
+    return result.data;
+  }, []);
+
+  const removeAdminUser = useCallback(async (id) => {
+    await api.removeAdminUser(id);
+    setAdminUsers(prev => prev.filter(userItem => userItem.id !== id));
   }, []);
 
   const changeAdminPassword = useCallback(async (id, newPassword) => {
-    const passwordHash = await hashPassword(newPassword);
-    setAdminUsers((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, passwordHash } : a))
-    );
+    await api.updateAdminUser(id, { password: newPassword });
   }, []);
 
-  const toggleAdminStatus = useCallback((id) => {
-    setAdminUsers((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, status: a.status === 'Active' ? 'Disabled' : 'Active' } : a))
-    );
-  }, []);
+  const toggleAdminStatus = useCallback(async (id) => {
+    const member = adminUsers.find(item => item.id === id);
+    if (!member) return;
+    const status = member.status === 'Active' ? 'Disabled' : 'Active';
+    const result = await api.updateAdminUser(id, { status });
+    setAdminUsers(prev => prev.map(item => item.id === id ? result.data : item));
+  }, [adminUsers]);
 
   const logout = useCallback(() => {
     destroySessionToken();
     sessionStorage.removeItem('brightcart_page');
     sessionStorage.removeItem('brightcart_page_params');
     setUserState(null);
+    setOrders([]);
+    setAdminProducts([]);
+    setAdminUsers([]);
     setPage('home');
   }, []);
 
-  // ── Admin: product CRUD (inputs sanitised) ───────────────────────────────────
+  // Keep storefront products and the admin draft catalog separate.
   const addProduct = useCallback(async (data) => {
-    const newProd = { ...sanitizeObject(data), id: `prod-${Date.now()}` };
-    api.addProduct(newProd);
-    setProducts(prev => [newProd, ...prev]);
+    const result = await api.addProduct(sanitizeObject(data));
+    const created = result.data;
+    setAdminProducts(prev => [created, ...prev]);
+    if (created.status !== 'Draft' && created.status !== 'Out of Stock') setProducts(prev => [created, ...prev]);
+    return created;
   }, []);
 
-  const updateProduct = useCallback((updated) => {
-    setProducts(prev => prev.map(p => p.id === updated.id ? { ...p, ...sanitizeObject(updated) } : p));
+  const updateProduct = useCallback(async (updated) => {
+    const result = await api.updateProduct(sanitizeObject(updated));
+    const saved = result.data;
+    setAdminProducts(prev => prev.map(product => product.id === saved.id ? saved : product));
+    if (saved.status !== 'Draft' && saved.status !== 'Out of Stock') {
+      setProducts(prev => prev.some(product => product.id === saved.id) ? prev.map(product => product.id === saved.id ? saved : product) : [saved, ...prev]);
+    } else {
+      setProducts(prev => prev.filter(product => product.id !== saved.id));
+    }
+    return saved;
   }, []);
 
-  const deleteProduct = useCallback((id) => {
+  const deleteProduct = useCallback(async (id) => {
+    await api.deleteProduct(id);
+    setAdminProducts(prev => prev.filter(product => product.id !== id));
     setProducts(prev => prev.filter(p => p.id !== id));
+  }, []);
+
+  const refreshAdminProducts = useCallback(async () => {
+    const [adminResult, publicResult] = await Promise.all([api.getAdminProducts(), api.getProducts()]);
+    setAdminProducts(adminResult.data || []);
+    setProducts(publicResult.data || []);
+    return adminResult.data || [];
+  }, []);
+
+  const refreshAdminOrders = useCallback(async () => {
+    const result = await api.getAdminOrders();
+    setOrders(result.data || []);
+    return result.data || [];
   }, []);
 
   const cartCount = cart.reduce((sum, item) => sum + item.qty, 0);
@@ -272,6 +299,7 @@ export function StoreProvider({ children }) {
   return (
     <StoreContext.Provider value={{
       products,
+      adminProducts,
       cart,
       cartCount,
       cartTotal,
@@ -285,11 +313,13 @@ export function StoreProvider({ children }) {
       updateQty,
       placeOrder,
       login,
+      register,
       logout,
-      adminLogin,
       addProduct,
       updateProduct,
       deleteProduct,
+      refreshAdminProducts,
+      refreshAdminOrders,
       adminUsers,
       addAdminUser,
       removeAdminUser,

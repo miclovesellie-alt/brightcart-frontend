@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
-import { User, Mail, Lock, LogOut, Package, ShieldAlert, Timer, Phone, Globe } from 'lucide-react';
+import { useState } from 'react';
+import { User, Mail, Lock, LogOut, Package, ShieldAlert, Phone, Globe } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
-import { isLockedOut } from '../utils/security';
 import { useCurrency } from '../context/CurrencyContext';
 import AirpodsAnimation from '../components/AirpodsAnimation';
 
@@ -19,63 +18,44 @@ const inputStyle = {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function AccountPage() {
-  const { user, orders, login, logout, navigate, adminLogin } = useStore();
+  const { user, orders, login, register, logout, navigate } = useStore();
   const { format } = useCurrency();
   const [tab, setTab] = useState('login');
   const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', country: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [lockCountdown, setLockCountdown] = useState(0);
-
-  // Tick down the lockout countdown every second
-  useEffect(() => {
-    if (lockCountdown <= 0) return;
-    const t = setTimeout(() => setLockCountdown(c => c - 1), 1000);
-    return () => clearTimeout(t);
-  }, [lockCountdown]);
-
   const handleLogin = async e => {
     e.preventDefault();
     if (!form.email || !form.password) { setError('Please fill all fields.'); return; }
-
-    const lock = isLockedOut();
-    if (lock.locked) {
-      setLockCountdown(lock.secondsLeft);
-      setError(`Too many failed attempts. Try again in ${lock.secondsLeft}s.`);
-      return;
-    }
-
     setLoading(true);
     setError('');
-
-    const result = await adminLogin(form.email, form.password);
-    if (result.success) {
+    try {
+      const signedIn = await login(form.email, form.password);
+      setError('');
+      if (['super_admin', 'admin', 'moderator'].includes(signedIn.role)) navigate('admin');
+    } catch (err) {
+      setError(err.message || 'Unable to sign in. Check your details and try again.');
+    } finally {
       setLoading(false);
-      navigate('admin');
-      return;
     }
-
-    if (result.locked) {
-      setLockCountdown(result.secondsLeft);
-      setError(`Too many failed attempts. Locked for ${result.secondsLeft}s.`);
-      setLoading(false);
-      return;
-    }
-
-    login({ name: form.email.split('@')[0], email: form.email });
-    setError('');
-    setLoading(false);
   };
 
-  const handleRegister = e => {
+  const handleRegister = async e => {
     e.preventDefault();
     if (!form.name || !form.email || !form.password || !form.phone || !form.country) {
       setError('Please fill all fields.'); return;
     }
-    if (form.password.length < 6) { setError('Password must be 6+ characters.'); return; }
+    if (form.password.length < 10) { setError('Password must be at least 10 characters.'); return; }
     if (!/^\+?[\d\s\-()\\.]{7,20}$/.test(form.phone)) { setError('Please enter a valid phone number.'); return; }
-    login({ name: form.name, email: form.email, phone: form.phone, country: form.country });
+    setLoading(true);
     setError('');
+    try {
+      await register({ name: form.name, email: form.email, password: form.password, phone: form.phone, country: form.country });
+    } catch (err) {
+      setError(err.message || 'Unable to create your account. Try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const update = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
@@ -319,7 +299,7 @@ export default function AccountPage() {
             {error && (
               <div style={{ marginBottom: '16px', padding: '12px 16px', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', fontSize: '14px', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <ShieldAlert size={15} style={{ flexShrink: 0 }} />
-                <span>{lockCountdown > 0 ? `Account locked. Try again in ${lockCountdown}s.` : error}</span>
+                <span>{error}</span>
               </div>
             )}
 
@@ -407,12 +387,10 @@ export default function AccountPage() {
               <button
                 type="submit"
                 className="btn-primary"
-                style={{ justifyContent: 'center', marginTop: '8px', opacity: (loading || lockCountdown > 0) ? 0.7 : 1, cursor: (loading || lockCountdown > 0) ? 'not-allowed' : 'pointer' }}
-                disabled={loading || lockCountdown > 0}
+                style={{ justifyContent: 'center', marginTop: '8px', opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
+                disabled={loading}
               >
-                {lockCountdown > 0
-                  ? <span style={{ display:'flex', alignItems:'center', gap:6 }}><Timer size={14} /> Locked ({lockCountdown}s)</span>
-                  : loading ? 'Signing in…'
+                {loading ? 'Please wait…'
                   : tab === 'login' ? 'Sign In' : 'Create Account'
                 }
               </button>

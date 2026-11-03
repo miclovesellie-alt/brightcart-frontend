@@ -1,16 +1,23 @@
-# React + Vite
+# BrightCart Storefront
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React and Vite storefront with a role-gated admin area, customer accounts, checkout, and an integrated dropshipping workspace.
 
-Currently, two official plugins are available:
+## Run locally
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. Start the [BrightCart backend](https://github.com/miclovesellie-alt/brightcart-backend#brightcart-backend) and configure its `.env` file.
+2. Copy `.env.example` to `.env`. Set `VITE_API_URL` if the backend is not at `http://localhost:5000/api`.
+3. Optionally set the Paystack **public** key from your own Paystack account. Leave it blank to disable Paystack checkout; never put a Paystack secret key in a `VITE_` variable.
+4. Install dependencies and run Vite:
 
-## React Compiler
+   ```sh
+   npm install
+   npm run dev
+   ```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Accounts and sessions
 
-## Expanding the Oxlint configuration
+Registration and login are handled by the backend. New registrations receive the customer role; the first super admin is configured through the backend's `SUPER_ADMIN_EMAIL` and `SUPER_ADMIN_PASSWORD`, and that account manages other admin users. The frontend stores only the short-lived JWT session in `sessionStorage`, not the password, and sends it as a bearer token to protected API routes. See the backend README for hash, token, role, and lockout details.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+## Dropshipping workspace
+
+Admins can record sourced product research, use the pricing calculator, create hidden product drafts in the same catalog as Admin Products, review and publish them, and track fulfillment. The optional AI writer uses a locally installed Ollama model configured on the backend; there is no paid AI fallback. No supplier API or automatic purchasing integration is present. Paystack browser callbacks remain pending until a super admin manually verifies the transaction against Paystack. The app does not claim server-side payment verification.

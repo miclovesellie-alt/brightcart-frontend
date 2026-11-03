@@ -48,7 +48,7 @@ const EMPTY_FORM = {
 };
 
 export default function AdminProducts() {
-  const { products, addProduct, updateProduct, deleteProduct } = useStore();
+  const { adminProducts: products, addProduct, updateProduct, deleteProduct } = useStore();
   const { format } = useCurrency();
   const [search, setSearch]       = useState('');
   const [cat, setCat]             = useState('All');
