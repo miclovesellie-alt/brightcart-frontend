@@ -90,7 +90,7 @@ export default function ProductDetailPage() {
               minHeight: '360px',
               overflow: 'hidden',
             }}>
-              <ProductImageGallery product={product} alt={product.name} className="product-detail-page__gallery" scrollable={false} style={{ width: '100%', height: 300, flex: '0 0 auto', borderRadius: 10, overflow: 'hidden' }} imageStyle={{ padding: 0 }} />
+              <ProductImageGallery product={product} alt={product.name} className="product-detail-page__gallery" scrollable={false} swipeable style={{ width: '100%', height: 300, flex: '0 0 auto', borderRadius: 10, overflow: 'hidden' }} imageStyle={{ padding: 0, maxWidth: '86%', maxHeight: '86%' }} />
             </div>
 
             {/* Guarantees */}
@@ -156,7 +156,7 @@ export default function ProductDetailPage() {
             </div>
 
             {/* Price */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '20px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="product-detail-page__price" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '20px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
               <span style={{ fontSize: '36px', fontWeight: 900, color: '#fff' }}>{format(product.price)}</span>
               {product.originalPrice && (
                 <>

@@ -110,7 +110,7 @@ export default function AdminLayout({ children, activePage }) {
   );
 
   return (
-    <div style={{ display:'flex', height:'100vh', overflow:'hidden', background:'#f0f4f8', fontFamily:'Inter,system-ui,sans-serif' }}>
+    <div className="admin-layout" style={{ display:'flex', width:'100%', maxWidth:'100%', minWidth:0, height:'100vh', overflow:'hidden', background:'#f0f4f8', fontFamily:'Inter,system-ui,sans-serif' }}>
       {/* Desktop Sidebar */}
       <aside style={{ width:210, flexShrink:0, display:'flex', flexDirection:'column', overflowY:'auto' }} className="hidden-mobile">
         <Sidebar />
@@ -120,7 +120,7 @@ export default function AdminLayout({ children, activePage }) {
       {open && (
         <div style={{ position:'fixed', inset:0, zIndex:100 }}>
           <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.55)' }} onClick={() => setOpen(false)} />
-          <aside style={{ position:'absolute', left:0, top:0, height:'100%', width:220, overflowY:'auto' }}>
+          <aside style={{ position:'absolute', left:0, top:0, height:'100%', width:'min(220px, 100vw)', overflowY:'auto' }}>
             <Sidebar />
           </aside>
         </div>
@@ -129,13 +129,13 @@ export default function AdminLayout({ children, activePage }) {
       {/* Main */}
       <div style={{ flex:1, display:'flex', flexDirection:'column', minWidth:0, overflow:'hidden' }}>
         {/* Top Bar */}
-        <header style={{ display:'flex', alignItems:'center', gap:12, padding:'0 20px', height:58, background:'#fff', borderBottom:'1px solid #e2e8f0', flexShrink:0 }}>
-          <button onClick={() => setOpen(true)} style={{ padding:6, borderRadius:8, background:'#f1f5f9', border:'none', cursor:'pointer', display:'flex' }}>
+        <header className="admin-topbar" style={{ display:'flex', alignItems:'center', gap:12, padding:'0 20px', height:58, background:'#fff', borderBottom:'1px solid #e2e8f0', flexShrink:0 }}>
+          <button className="admin-topbar-hamburger" aria-label={open ? 'Close admin navigation' : 'Open admin navigation'} aria-expanded={open} onClick={() => setOpen(value => !value)} style={{ padding:6, borderRadius:8, background:'#f1f5f9', border:'none', cursor:'pointer', display:'flex', flexShrink:0 }}>
             <Menu size={18} color="#64748b" />
           </button>
 
           {/* Page title */}
-          <div>
+          <div className="admin-topbar-heading">
             <div style={{ fontWeight:700, fontSize:15, color:'#0f172a' }}>
               {ALL_NAV.find(n => n.page === activePage)?.label || 'Admin'}
             </div>
@@ -143,7 +143,7 @@ export default function AdminLayout({ children, activePage }) {
           </div>
 
           {/* Search */}
-          <div style={{ flex:1, maxWidth:360, margin:'0 16px', position:'relative' }}>
+          <div className="admin-topbar-search" style={{ flex:1, maxWidth:360, margin:'0 16px', position:'relative' }}>
             <Search size={14} color="#94a3b8" style={{ position:'absolute', left:11, top:'50%', transform:'translateY(-50%)' }} />
             <input
               placeholder="Search orders, products, customers…"
@@ -151,9 +151,9 @@ export default function AdminLayout({ children, activePage }) {
             />
           </div>
 
-          <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:12 }}>
+          <div className="admin-topbar-actions" style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:12, flexShrink:0 }}>
             {/* Currency Selector */}
-            <CurrencySelector theme="light" />
+            <div className="admin-topbar-currency"><CurrencySelector theme="light" /></div>
             {/* Notifications */}
             <div style={{ position:'relative' }}>
               <button
@@ -179,11 +179,11 @@ export default function AdminLayout({ children, activePage }) {
             </div>
 
             {/* Avatar */}
-            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            <div className="admin-topbar-user" style={{ display:'flex', alignItems:'center', gap:8 }}>
               <div style={{ width:32, height:32, borderRadius:'50%', background:'linear-gradient(135deg,#2563eb,#7c3aed)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, color:'#fff', fontSize:13 }}>
                 {(user?.name || 'A')[0].toUpperCase()}
               </div>
-              <div style={{ lineHeight:1.2 }}>
+              <div className="admin-topbar-user-copy" style={{ lineHeight:1.2 }}>
                 <div style={{ fontSize:12, fontWeight:600, color:'#0f172a' }}>{user?.name || 'Admin'}</div>
                 <div style={{ display:'flex', alignItems:'center', gap:4 }}>
                   <span style={{ fontSize:9, fontWeight:700, padding:'1px 7px', borderRadius:20, background: roleMeta.bg, color: roleMeta.color }}>
@@ -196,13 +196,26 @@ export default function AdminLayout({ children, activePage }) {
         </header>
 
         {/* Content */}
-        <main style={{ flex:1, overflowY:'auto', padding:'20px' }}>
+        <main className="admin-page-content" style={{ flex:1, minWidth:0, overflowY:'auto', padding:'20px' }}>
           {children}
         </main>
       </div>
 
       <style>{`
-        @media (max-width: 768px) { .hidden-mobile { display: none !important; } }
+        @media (max-width: 768px) {
+          .hidden-mobile { display: none !important; }
+          .admin-topbar { min-width: 0; gap: 8px !important; padding: 0 10px !important; }
+          .admin-topbar-search { display: none !important; }
+          .admin-topbar-actions { gap: 6px !important; }
+          .admin-topbar-user-copy { display: none !important; }
+        }
+        @media (max-width: 480px) {
+          .admin-topbar-currency { display: none !important; }
+        }
+        @media (max-width: 340px) {
+          .admin-topbar { padding: 0 6px !important; }
+          .admin-topbar-heading > div:last-child { display: none; }
+        }
       `}</style>
     </div>
   );

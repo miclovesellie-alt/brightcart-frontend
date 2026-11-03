@@ -12,10 +12,11 @@ export default function ProductImageGallery({
   showControls = true,
   label,
   scrollable = true,
+  swipeable = false,
 }) {
   const images = getProductImages(product);
   const trackRef = useRef(null);
-  const touchStartX = useRef(null);
+  const touchStart = useRef(null);
   const justSwiped = useRef(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [failedImages, setFailedImages] = useState({});
@@ -34,12 +35,28 @@ export default function ProductImageGallery({
     setActiveIndex(nextIndex);
   };
 
+  const onTouchStart = event => {
+    const touch = event.touches[0];
+    touchStart.current = { x: touch.clientX, y: touch.clientY };
+  };
+
   const onTouchEnd = event => {
-    if (touchStartX.current !== null && Math.abs(event.changedTouches[0].clientX - touchStartX.current) > 12) {
-      justSwiped.current = true;
-      window.setTimeout(() => { justSwiped.current = false; }, 350);
+    const touch = event.changedTouches[0];
+    if (touchStart.current) {
+      const deltaX = touch.clientX - touchStart.current.x;
+      const deltaY = touch.clientY - touchStart.current.y;
+      const isHorizontalSwipe = Math.abs(deltaX) > 12 && Math.abs(deltaX) > Math.abs(deltaY);
+
+      if (isHorizontalSwipe) {
+        justSwiped.current = true;
+        window.setTimeout(() => { justSwiped.current = false; }, 350);
+
+        if (swipeable && !scrollable && images.length > 1 && Math.abs(deltaX) > 36) {
+          setActiveIndex(current => Math.max(0, Math.min(images.length - 1, current + (deltaX < 0 ? 1 : -1))));
+        }
+      }
     }
-    touchStartX.current = null;
+    touchStart.current = null;
   };
 
   const stopCardClickAfterSwipe = event => {
@@ -57,10 +74,10 @@ export default function ProductImageGallery({
   return (
     <div
       className={className}
-      style={{ position: 'relative', overflow: 'hidden', ...style }}
+      style={{ position: 'relative', overflow: 'hidden', touchAction: swipeable && !scrollable ? 'pan-y' : undefined, ...style }}
       onClick={stopCardClickAfterSwipe}
-      onTouchStart={scrollable ? event => { touchStartX.current = event.touches[0].clientX; } : undefined}
-      onTouchEnd={scrollable ? onTouchEnd : undefined}
+      onTouchStart={scrollable || swipeable ? onTouchStart : undefined}
+      onTouchEnd={scrollable || swipeable ? onTouchEnd : undefined}
     >
       {images.length ? (
         <div
@@ -81,7 +98,7 @@ export default function ProductImageGallery({
                   alt={index === 0 ? (alt || product?.name || 'Product') : `${alt || product?.name || 'Product'} image ${index + 1}`}
                   loading="lazy"
                   onError={() => setFailedImages(current => ({ ...current, [src]: true }))}
-                  style={{ width: 'auto', height: 'auto', maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', ...imageStyle }}
+                  style={{ width: 'auto', height: 'auto', maxWidth: '92%', maxHeight: '92%', objectFit: 'contain', ...imageStyle }}
                 />
               )}
             </div>

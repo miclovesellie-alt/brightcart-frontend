@@ -49,6 +49,7 @@ export default function Navbar() {
   return (
     <>
       <nav
+        className="storefront-navbar"
         style={{
           position: 'fixed',
           top: 0,
@@ -73,6 +74,7 @@ export default function Navbar() {
       >
         {/* Logo */}
         <button
+          className="storefront-navbar__brand"
           onClick={() => navigate('home')}
           style={{
             display: 'flex',
@@ -86,7 +88,7 @@ export default function Navbar() {
           }}
         >
           <Zap size={18} color="#4f8ef7" fill="#4f8ef7" />
-          <span style={{ color: '#fff', fontSize: '18px', fontWeight: 800, letterSpacing: '-0.5px' }}>
+          <span className="storefront-navbar__brand-name" style={{ color: '#fff', fontSize: '18px', fontWeight: 800, letterSpacing: '-0.5px' }}>
             Shoppercart
           </span>
           <span style={{
@@ -199,11 +201,12 @@ export default function Navbar() {
         </div>
 
         {/* Right Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
+        <div className="storefront-navbar__actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
           {/* Currency Selector */}
-          <CurrencySelector theme="dark" />
+          <div className="storefront-navbar__currency"><CurrencySelector theme="dark" /></div>
           {/* Cart */}
           <button
+            className="storefront-navbar__cart"
             onClick={() => navigate('cart')}
             style={{
               position: 'relative',
@@ -245,6 +248,7 @@ export default function Navbar() {
 
           {/* Account */}
           <button
+            className="storefront-navbar__account"
             onClick={() => navigate('account')}
             style={{
               background: 'none',
@@ -293,7 +297,9 @@ export default function Navbar() {
           {/* Hamburger */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="show-mobile"
+            className="show-mobile storefront-navbar__hamburger"
+            aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            aria-expanded={mobileOpen}
             style={{
               background: 'none',
               border: 'none',
@@ -310,12 +316,15 @@ export default function Navbar() {
 
       {/* Mobile Menu */}
       {mobileOpen && (
-        <div style={{
+        <div className="storefront-mobile-menu" style={{
           position: 'fixed',
           top: '56px',
           right: 0,
           bottom: 0,
-          width: '280px',
+          width: 'min(280px, 100vw)',
+          maxWidth: '100vw',
+          boxSizing: 'border-box',
+          overflowY: 'auto',
           background: '#111118',
           borderLeft: '1px solid rgba(255,255,255,0.08)',
           zIndex: 999,
@@ -324,6 +333,9 @@ export default function Navbar() {
           flexDirection: 'column',
           gap: '8px',
         }}>
+          <div className="storefront-mobile-menu__currency">
+            <CurrencySelector theme="dark" />
+          </div>
           {NAV_LINKS.map((link) => (
             <button
               key={link.label}
