@@ -72,7 +72,7 @@ export default function ProductImageGallery({
                   alt={index === 0 ? (alt || product?.name || 'Product') : `${alt || product?.name || 'Product'} image ${index + 1}`}
                   loading="lazy"
                   onError={() => setFailedImages(current => ({ ...current, [src]: true }))}
-                  style={{ width: '100%', height: '100%', objectFit: 'contain', ...imageStyle }}
+                  style={{ width: 'auto', height: 'auto', maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', ...imageStyle }}
                 />
               )}
             </div>

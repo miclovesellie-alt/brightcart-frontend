@@ -234,6 +234,16 @@ function ProductCard({ product, onClick }) {
   const { addToCart } = useStore();
   const { format } = useCurrency();
   const [added, setAdded] = useState(false);
+  const [nameExpanded, setNameExpanded] = useState(false);
+
+  const handleNameClick = (event) => {
+    const isSmallScreen = window.matchMedia('(max-width: 767px)').matches;
+    const isClamped = event.currentTarget.scrollHeight > event.currentTarget.clientHeight + 1;
+    if (isSmallScreen && isClamped && !nameExpanded) {
+      event.stopPropagation();
+      setNameExpanded(true);
+    }
+  };
 
   const catColors = {
     phones:              { bg: 'rgba(79,142,247,0.15)', color: '#4f8ef7' },
@@ -273,7 +283,16 @@ function ProductCard({ product, onClick }) {
       <span style={{ alignSelf: 'flex-start', padding: '3px 10px', borderRadius: '100px', fontSize: '11px', fontWeight: 600, background: c.bg, color: c.color, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
         {product.category.replace('-', ' ')}
       </span>
-      <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#fff', lineHeight: 1.4 }}>{product.name}</h3>
+      <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#fff', lineHeight: 1.4 }}>
+        <button
+          type="button"
+          className={`product-card-name${nameExpanded ? ' is-expanded' : ''}`}
+          aria-expanded={nameExpanded}
+          onClick={handleNameClick}
+        >
+          {product.name}
+        </button>
+      </h3>
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
         <div style={{ display: 'flex' }}>
           {[...Array(5)].map((_, i) => (
@@ -317,19 +336,39 @@ function FeaturedProducts() {
   const cardRefs = useRef([]);
   const featured = products.filter(p => isStorefrontProduct(p) && p.featured).slice(0, 6);
 
+  const featuredIds = featured.map(product => product.id).join('|');
+
   useEffect(() => {
+    const observers = [];
+    const revealTimeouts = [];
+
     cardRefs.current.filter(Boolean).forEach((card, i) => {
-      const obs = new IntersectionObserver((entries) => {
+      if (!('IntersectionObserver' in window)) {
+        card.style.opacity = '1';
+        card.style.transform = 'translateY(0)';
+        return;
+      }
+
+      const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            setTimeout(() => { card.style.opacity='1'; card.style.transform='translateY(0)'; }, i * 100);
-            obs.disconnect();
-          }
+          if (!entry.isIntersecting) return;
+          const timeout = window.setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+          }, i * 100);
+          revealTimeouts.push(timeout);
+          observer.disconnect();
         });
       }, { threshold: 0.1 });
-      obs.observe(card);
+      observers.push(observer);
+      observer.observe(card);
     });
-  }, []);
+
+    return () => {
+      observers.forEach(observer => observer.disconnect());
+      revealTimeouts.forEach(timeout => window.clearTimeout(timeout));
+    };
+  }, [featuredIds]);
 
   if (featured.length === 0) return null;
 

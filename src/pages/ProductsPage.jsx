@@ -38,6 +38,7 @@ function ProductCard({ product, onClick }) {
   const { addToCart } = useStore();
   const { format } = useCurrency();
   const [added, setAdded] = useState(false);
+  const [nameExpanded, setNameExpanded] = useState(false);
 
   const categoryColors = {
     phones: { bg: 'rgba(79,142,247,0.15)', color: '#4f8ef7' },
@@ -52,6 +53,15 @@ function ProductCard({ product, onClick }) {
   const tagLabel = tagIsUrl
     ? tagWithoutProtocol.split(/[/?#]/)[0].replace(/^www\./i, '')
     : tagText;
+
+  const handleNameClick = (event) => {
+    const isSmallScreen = window.matchMedia('(max-width: 767px)').matches;
+    const isClamped = event.currentTarget.scrollHeight > event.currentTarget.clientHeight + 1;
+    if (isSmallScreen && isClamped && !nameExpanded) {
+      event.stopPropagation();
+      setNameExpanded(true);
+    }
+  };
 
   const handleAddToCart = (e) => {
     e.stopPropagation();
@@ -106,7 +116,16 @@ function ProductCard({ product, onClick }) {
         </span>
       )}
 
-      <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#fff', lineHeight: 1.4 }}>{product.name}</h3>
+      <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#fff', lineHeight: 1.4 }}>
+        <button
+          type="button"
+          className={`product-card-name${nameExpanded ? ' is-expanded' : ''}`}
+          aria-expanded={nameExpanded}
+          onClick={handleNameClick}
+        >
+          {product.name}
+        </button>
+      </h3>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
         <div style={{ display: 'flex' }}>

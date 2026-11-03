@@ -52,6 +52,20 @@
     overflow-wrap: anywhere;
   }
 
+  .product-card-name {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+  }
+
+  .product-card-name.is-expanded {
+    display: block;
+    -webkit-line-clamp: unset;
+    overflow: visible;
+  }
+
   .product-detail-page__content {
     padding: 28px 16px !important;
   }
@@ -295,6 +309,21 @@
   opacity: 0.3;
 }
 
+/* Product card title button keeps the existing heading typography. */
+.product-card-name {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
 /* Product image hover */
 .product-img-wrap {
   overflow: hidden;
@@ -303,6 +332,7 @@
 .product-img-wrap img {
   transition: transform 0.4s ease;
 }
+/* Keep low-resolution product images sharp instead of enlarging them on hover. */
 .product-img-wrap:hover img {
-  transform: scale(1.06);
+  transform: none;
 }
