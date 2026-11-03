@@ -1,41 +1,65 @@
 import { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { useCurrency } from '../context/CurrencyContext';
-import { Star, ShoppingCart, Heart, ArrowLeft } from 'lucide-react';
+import ImageAssembler from '../components/ImageAssembler';
+import { Star, ShoppingCart, Heart, ArrowLeft, Shield, Truck, RefreshCw, Package } from 'lucide-react';
+
+const TECH_SPECS = {
+  phones: [
+    { label: 'Display', value: '6.7" AMOLED' },
+    { label: 'Processor', value: 'Snapdragon 8 Gen 3' },
+    { label: 'Camera', value: '200MP Triple' },
+    { label: 'Battery', value: '5000mAh' },
+  ],
+  'phone-accessories': [
+    { label: 'Connectivity', value: 'Bluetooth 5.3' },
+    { label: 'Battery', value: '36hr total' },
+    { label: 'Driver', value: '10mm dynamic' },
+    { label: 'Warranty', value: '1 year' },
+  ],
+  'laptop-accessories': [
+    { label: 'Interface', value: 'USB-C 3.2' },
+    { label: 'Output', value: '4K@60Hz' },
+    { label: 'Power', value: '100W PD' },
+    { label: 'Ports', value: '12-in-1' },
+  ],
+  electrical: [
+    { label: 'Power', value: '2500W max' },
+    { label: 'Surge', value: '1800J protect' },
+    { label: 'Outlets', value: '4 AC + 4 USB' },
+    { label: 'Warranty', value: '2 years' },
+  ],
+};
+
+const GUARANTEES = [
+  { icon: Shield, label: 'Secure Payment' },
+  { icon: Truck, label: 'Fast Shipping' },
+  { icon: RefreshCw, label: '30-Day Returns' },
+  { icon: Package, label: 'Genuine Products' },
+];
 
 export default function ProductDetailPage() {
-  const { products, productsLoading, productsError, pageParams, navigate, addToCart } = useStore();
+  const { products, pageParams, navigate, addToCart } = useStore();
   const { format } = useCurrency();
-  const product = products.find(p => String(p.id) === String(pageParams.productId));
+  const product = products.find(p => p.id === pageParams.productId) || products[0];
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const [wishlisted, setWishlisted] = useState(false);
 
-  const related = product ? products
+  const related = products
     .filter(p => p.category === product.category && p.id !== product.id)
-    .slice(0, 4) : [];
+    .slice(0, 4);
 
-  const discount = product && Number(product.originalPrice) > Number(product.price)
+  const specs = TECH_SPECS[product.category] || TECH_SPECS.phones;
+  const discount = product.originalPrice
     ? Math.round((1 - product.price / product.originalPrice) * 100)
     : null;
 
   const handleAddToCart = () => {
-    if (!product) return;
     addToCart(product, qty);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
-
-  if (!product) {
-    return (
-      <div style={{ background: '#0a0a0f', minHeight: '70vh', padding: '128px 24px 64px', textAlign: 'center', color: '#fff' }}>
-        <p style={{ color: '#aab2bd', marginBottom: 20 }}>
-          {productsLoading ? 'Loading product…' : productsError ? 'The catalog is temporarily unavailable.' : 'This product is no longer available.'}
-        </p>
-        <button onClick={() => navigate('products')} className="btn-primary">Back to products</button>
-      </div>
-    );
-  }
 
   return (
     <div style={{ background: '#0a0a0f', minHeight: '100vh', paddingTop: '80px' }}>
@@ -81,14 +105,34 @@ export default function ProductDetailPage() {
               minHeight: '360px',
               overflow: 'hidden',
             }}>
-              {product.image ? (
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  style={{ display: 'block', width: '100%', maxHeight: '420px', objectFit: 'contain' }}
-                  onError={event => { event.currentTarget.style.display = 'none'; }}
-                />
-              ) : <p style={{ color: '#8892a4', fontSize: 14 }}>No product photo has been added yet.</p>}
+              <ImageAssembler
+                src={product.image}
+                width={420}
+                height={300}
+                trigger="load"
+              />
+            </div>
+
+            {/* Guarantees */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(4, 1fr)',
+              gap: '12px',
+            }}>
+              {GUARANTEES.map(({ icon: Icon, label }) => (
+                <div key={label} className="glass" style={{
+                  borderRadius: '10px',
+                  padding: '12px 8px',
+                  textAlign: 'center',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}>
+                  <Icon size={16} color="#4f8ef7" />
+                  <span style={{ fontSize: '11px', color: '#8892a4', fontWeight: 500 }}>{label}</span>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -121,7 +165,7 @@ export default function ProductDetailPage() {
             </h1>
 
             {/* Rating */}
-            {Number(product.reviews) > 0 && Number(product.rating) > 0 && <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ display: 'flex' }}>
                 {[...Array(5)].map((_, i) => (
                   <Star key={i} size={16} fill={i < Math.floor(product.rating) ? '#f6c90e' : 'none'} color={i < Math.floor(product.rating) ? '#f6c90e' : '#4a5568'} />
@@ -129,12 +173,12 @@ export default function ProductDetailPage() {
               </div>
               <span style={{ color: '#fff', fontWeight: 600, fontSize: '14px' }}>{product.rating}</span>
               <span style={{ color: '#4a5568', fontSize: '14px' }}>({product.reviews} reviews)</span>
-            </div>}
+            </div>
 
             {/* Price */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '20px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
               <span style={{ fontSize: '36px', fontWeight: 900, color: '#fff' }}>{format(product.price)}</span>
-              {Number(product.originalPrice) > Number(product.price) && (
+              {product.originalPrice && (
                 <>
                   <span style={{ fontSize: '20px', color: '#4a5568', textDecoration: 'line-through' }}>{format(product.originalPrice)}</span>
                   <span style={{
@@ -152,9 +196,9 @@ export default function ProductDetailPage() {
             </div>
 
             {/* Description */}
-            {product.description && <p style={{ fontSize: '15px', color: '#8892a4', lineHeight: 1.8 }}>
+            <p style={{ fontSize: '15px', color: '#8892a4', lineHeight: 1.8 }}>
               {product.description}
-            </p>}
+            </p>
 
             {/* Quantity */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -239,6 +283,23 @@ export default function ProductDetailPage() {
                 <Heart size={18} fill={wishlisted ? '#ef4444' : 'none'} />
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* Tech Specs */}
+        <div style={{ marginBottom: '80px' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: 700, color: '#fff', marginBottom: '24px' }}>Tech Specifications</h2>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '16px',
+          }}>
+            {specs.map((spec) => (
+              <div key={spec.label} className="glass" style={{ borderRadius: '12px', padding: '20px' }}>
+                <div style={{ fontSize: '12px', color: '#4a5568', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>{spec.label}</div>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff' }}>{spec.value}</div>
+              </div>
+            ))}
           </div>
         </div>
 

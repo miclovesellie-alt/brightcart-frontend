@@ -2,8 +2,6 @@
 
 React and Vite storefront with a role-gated admin area, customer accounts, checkout, and an integrated dropshipping workspace.
 
-The storefront starts with an empty catalog and displays only products added to the live catalog. Add a real product photo before publishing an item; ratings and review counts appear only when review data exists.
-
 ## Run locally
 
 1. Start the [BrightCart backend](https://github.com/miclovesellie-alt/brightcart-backend#brightcart-backend) and configure its `.env` file.

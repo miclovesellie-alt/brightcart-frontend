@@ -2,15 +2,16 @@ import { useState, useEffect, useRef } from 'react';
 import { useStore } from '../context/StoreContext';
 import { ShoppingCart, User, Menu, X, ChevronDown, Zap } from 'lucide-react';
 import CurrencySelector from './CurrencySelector';
-import { formatCategory } from '../utils/catalog';
 
 const NAV_LINKS = [
   { label: 'Home', page: 'home' },
   { label: 'Products', page: 'products' },
+  { label: 'Categories', page: null, dropdown: ['Phones', 'Phone Accessories', 'Laptop Accessories', 'Electrical'] },
+  { label: 'About', page: null },
 ];
 
 export default function Navbar() {
-  const { navigate, cartCount, page, products } = useStore();
+  const { navigate, cartCount, page } = useStore();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -32,17 +33,17 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  const categories = [...new Set(products.map(product => product.category).filter(Boolean))]
-    .sort()
-    .map(value => ({ value, label: formatCategory(value) }));
-  const navLinks = categories.length
-    ? [...NAV_LINKS, { label: 'Categories', page: null, dropdown: categories }]
-    : NAV_LINKS;
+  const categoryPageMap = {
+    'Phones': 'phones',
+    'Phone Accessories': 'phone-accessories',
+    'Laptop Accessories': 'laptop-accessories',
+    'Electrical': 'electrical',
+  };
 
   const handleCategoryNav = (cat) => {
     setDropdownOpen(false);
     setMobileOpen(false);
-    navigate('products', { category: cat.value });
+    navigate('products');
   };
 
   return (
@@ -99,7 +100,7 @@ export default function Navbar() {
 
         {/* Center Nav - Desktop */}
         <div style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: '4px' }} className="hidden-mobile">
-          {navLinks.map((link) => (
+          {NAV_LINKS.map((link) => (
             link.dropdown ? (
               <div key={link.label} style={{ position: 'relative' }} ref={dropdownRef}>
                 <button
@@ -141,7 +142,7 @@ export default function Navbar() {
                   }}>
                     {link.dropdown.map((cat) => (
                       <button
-                        key={cat.value}
+                        key={cat}
                         onClick={() => handleCategoryNav(cat)}
                         style={{
                           display: 'block',
@@ -165,7 +166,7 @@ export default function Navbar() {
                           e.currentTarget.style.background = 'none';
                         }}
                       >
-                        {cat.label}
+                        {cat}
                       </button>
                     ))}
                   </div>
@@ -346,20 +347,6 @@ export default function Navbar() {
               }}
             >
               {link.label}
-            </button>
-          ))}
-          {categories.length > 0 && (
-            <div style={{ padding: '14px 0 6px', color: '#94a3b8', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              Categories
-            </div>
-          )}
-          {categories.map(category => (
-            <button
-              key={category.value}
-              onClick={() => handleCategoryNav(category)}
-              style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.8)', fontSize: 14, cursor: 'pointer', padding: '7px 0', textAlign: 'left' }}
-            >
-              {category.label}
             </button>
           ))}
           <button

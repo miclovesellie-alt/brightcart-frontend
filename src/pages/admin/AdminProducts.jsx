@@ -37,13 +37,14 @@ const ICON_DISPLAY = {
 
 function getIcon(p) {
   if (p.icon && ICON_DISPLAY[p.icon]) return ICON_DISPLAY[p.icon];
+  if (p.image && !p.image.startsWith('/')) return p.image; // legacy emoji stored directly
   return '📦';
 }
 
 const EMPTY_FORM = {
   name: '', category: 'phones', price: '', originalPrice: '', cost: '',
   stock: '', description: '', supplier: 'AliExpress', status: 'Active',
-  sku: '', icon: 'phone', image: '',
+  sku: '', icon: 'phone',
 };
 
 export default function AdminProducts() {
@@ -54,7 +55,6 @@ export default function AdminProducts() {
   const [showModal, setShowModal] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
   const [form, setForm]           = useState(EMPTY_FORM);
-  const [formError, setFormError] = useState('');
   const [deleteId, setDeleteId]   = useState(null);
 
   const filtered = products.filter(p => {
@@ -63,7 +63,7 @@ export default function AdminProducts() {
     return matchCat && matchQ;
   });
 
-  const openNew = () => { setForm(EMPTY_FORM); setFormError(''); setEditProduct(null); setShowModal(true); };
+  const openNew = () => { setForm(EMPTY_FORM); setEditProduct(null); setShowModal(true); };
   const openEdit = p => {
     setForm({
       ...EMPTY_FORM, ...p,
@@ -73,25 +73,14 @@ export default function AdminProducts() {
       stock:         String(p.stock || 0),
       icon:          p.icon || 'phone',
     });
-    setFormError('');
     setEditProduct(p);
     setShowModal(true);
   };
-  const closeModal = () => { setShowModal(false); setEditProduct(null); setFormError(''); };
+  const closeModal = () => { setShowModal(false); setEditProduct(null); };
 
   const handleSave = () => {
-    const image = String(form.image || '').trim();
-    if (form.status === 'Active' && !image) {
-      setFormError('Add a product image before publishing this item.');
-      return;
-    }
-    if (image && !image.startsWith('/') && !/^https:\/\//i.test(image)) {
-      setFormError('Use an https image URL or a path to an image in the storefront.');
-      return;
-    }
     const data = {
       ...form,
-      image,
       price:         parseFloat(form.price) || 0,
       originalPrice: parseFloat(form.originalPrice) || parseFloat(form.price) || 0,
       cost:          parseFloat(form.cost) || 0,
@@ -107,10 +96,7 @@ export default function AdminProducts() {
     return Math.round(((p.price - p.cost) / p.price) * 100);
   };
 
-  const F = (key, val) => {
-    setForm(f => ({ ...f, [key]: val }));
-    if (formError) setFormError('');
-  };
+  const F = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -235,14 +221,6 @@ export default function AdminProducts() {
                 <label style={lbl}>PRODUCT NAME *</label>
                 <input value={form.name} onChange={e => F('name', e.target.value)} placeholder="e.g. ProBuds X3 Wireless Earbuds" style={inp} />
               </div>
-
-              <div style={{ gridColumn: '1/-1' }}>
-                <label style={lbl}>PRODUCT IMAGE URL {form.status === 'Active' ? '*' : ''}</label>
-                <input type="url" value={form.image || ''} onChange={e => F('image', e.target.value)} placeholder="https://example.com/product-photo.jpg" style={inp} />
-                <p style={{ color: '#64748b', fontSize: 11, margin: '5px 0 0' }}>Use a clear photo of the exact item. Active products need an image.</p>
-              </div>
-
-              {formError && <p role="alert" style={{ gridColumn: '1/-1', color: '#b91c1c', fontSize: 12, margin: 0 }}>{formError}</p>}
 
               {/* Selling Price */}
               <div>
