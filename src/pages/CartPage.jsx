@@ -1,6 +1,7 @@
 import { Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useCurrency } from '../context/CurrencyContext';
+import ProductImageGallery from '../components/ProductImageGallery';
 
 export default function CartPage() {
   const { cart, removeFromCart, updateQty, cartTotal, navigate } = useStore();
@@ -48,24 +49,7 @@ export default function CartPage() {
                 alignItems: 'center',
                 gap: '16px',
               }}>
-                <div style={{
-                  width: '72px',
-                  height: '72px',
-                  background: '#111118',
-                  borderRadius: '10px',
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  overflow: 'hidden',
-                }}>
-                  <img
-                    src={item.product.image}
-                    alt={item.product.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '6px' }}
-                    onError={e => { e.target.style.display = 'none'; e.target.parentNode.innerHTML = '<span style="font-size:28px">📦</span>'; }}
-                  />
-                </div>
+                <ProductImageGallery product={item.product} alt={item.product.name} showControls={false} style={{ width: 72, height: 72, background: '#111118', borderRadius: 10, flex: '0 0 72px' }} imageStyle={{ padding: 6 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#fff', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.product.name}</h3>
                   <p style={{ fontSize: '12px', color: '#8892a4', marginBottom: '8px', textTransform: 'capitalize' }}>{item.product.category.replace('-', ' ')}</p>

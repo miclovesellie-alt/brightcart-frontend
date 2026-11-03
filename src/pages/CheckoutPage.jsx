@@ -3,6 +3,7 @@ import { CheckCircle, CreditCard, MapPin, ClipboardCheck, Smartphone, ShieldChec
 import { useStore } from '../context/StoreContext';
 import { useCurrency } from '../context/CurrencyContext';
 import { payWithPaystack } from '../utils/paystack';
+import ProductImageGallery from '../components/ProductImageGallery';
 
 const STEPS = [
   { id: 1, label: 'Shipping', icon: MapPin },
@@ -390,9 +391,7 @@ export default function CheckoutPage() {
                 <div style={{ marginBottom: '24px' }}>
                   {cart.map(item => (
                     <div key={item.product.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                      <div style={{ width: '40px', height: '40px', background: '#111118', borderRadius: '8px', overflow: 'hidden', flexShrink: 0 }}>
-                        <img src={item.product.image} alt={item.product.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} onError={e => { e.target.style.display = 'none'; }} />
-                      </div>
+                      <ProductImageGallery product={item.product} alt={item.product.name} showControls={false} style={{ width: 40, height: 40, background: '#111118', borderRadius: 8, flex: '0 0 40px' }} imageStyle={{ padding: 4 }} />
                       <div style={{ flex: 1, fontSize: '13px' }}>
                         <p style={{ fontWeight: 600, color: '#fff', margin: 0 }}>{item.product.name}</p>
                         <p style={{ color: '#8892a4', margin: '2px 0 0' }}>Qty: {item.qty}</p>

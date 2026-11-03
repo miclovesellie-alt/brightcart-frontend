@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { useCurrency } from '../context/CurrencyContext';
-import ImageAssembler from '../components/ImageAssembler';
+import ProductImageGallery from '../components/ProductImageGallery';
 import { Star, ShoppingCart, Heart, ArrowLeft, Shield, Truck, RefreshCw, Package } from 'lucide-react';
 
 const TECH_SPECS = {
@@ -115,12 +115,7 @@ export default function ProductDetailPage() {
               minHeight: '360px',
               overflow: 'hidden',
             }}>
-              <ImageAssembler
-                src={product.image}
-                width={420}
-                height={300}
-                trigger="load"
-              />
+              <ProductImageGallery product={product} alt={product.name} style={{ width: '100%', height: 300, flex: '0 0 auto', borderRadius: 10 }} imageStyle={{ padding: 0 }} />
             </div>
 
             {/* Guarantees */}
@@ -353,12 +348,7 @@ export default function ProductDetailPage() {
                     overflow: 'hidden',
                     flexShrink: 0,
                   }}>
-                    <img
-                      src={p.image}
-                      alt={p.name}
-                      style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }}
-                      onError={e => { e.target.style.display = 'none'; }}
-                    />
+                    <ProductImageGallery product={p} alt={p.name} showControls={false} style={{ width: '100%', height: '100%' }} imageStyle={{ padding: 4 }} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontSize: '13px', fontWeight: 600, color: '#fff', lineHeight: 1.3, marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</p>

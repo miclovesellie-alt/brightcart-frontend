@@ -7,6 +7,7 @@ import {
 import { api } from '../../utils/api';
 import { useCurrency } from '../../context/CurrencyContext';
 import { useStore } from '../../context/StoreContext';
+import ProductImageGallery from '../../components/ProductImageGallery';
 import './dropshipping.css';
 
 const NAV = [
@@ -416,7 +417,7 @@ export default function AIDropshipping() {
                 {!research.length ? <div className="ds-empty">No sourced research yet. Add a candidate above to start a review record.</div> : (
                   <div className="ds-research-list">{research.map(candidate => (
                     <article className="ds-research-card" key={candidate._id}>
-                      <div className="ds-research-art">{candidate.imageUrl ? <img src={candidate.imageUrl} alt="" onError={event => { event.currentTarget.style.display = 'none'; }} /> : <Package size={22} />}</div>
+                      <ProductImageGallery className="ds-research-art" product={{ image: candidate.imageUrl }} alt={candidate.productName} showControls={false} />
                       <div className="ds-research-main">
                         <div className="ds-research-title"><div><h4>{candidate.productName}</h4><small>{candidate.supplierName} · {candidate.category}</small></div><StatusPill tone={candidate.state === 'imported' ? 'green' : 'blue'}>{candidate.state || 'researched'}</StatusPill></div>
                         <p className="ds-research-facts">{candidate.verifiedFacts?.slice(0, 2).join(' · ') || 'No verified product facts supplied.'}</p>
@@ -475,7 +476,7 @@ export default function AIDropshipping() {
               {!draftProducts.length ? <div className="ds-panel ds-empty" style={cardStyle}>No AI dropshipping drafts yet. Save a research candidate and import it here.</div> : (
                 <div className="ds-studio-grid">{draftProducts.map(product => (
                   <button className="ds-studio-card" style={cardStyle} key={product.id} onClick={() => { setEditingDraft({ ...product, price: String(Number(product.price || 0) * (rates[currency] || 1)) }); setDraftChecks({ policyReviewed: false, inventoryVerified: false, contentReviewed: false }); }}>
-                    <div className="ds-studio-image">{product.image ? <img src={product.image} alt="" onError={event => { event.currentTarget.style.display = 'none'; }} /> : <Package size={24} />}</div>
+                    <ProductImageGallery className="ds-studio-image" product={product} alt={product.name} showControls={false} />
                     <div className="ds-studio-body"><div className="ds-studio-row"><StatusPill tone="amber">Draft</StatusPill><span>{product.category}</span></div><h3>{product.name}</h3><p>{product.description || 'Description required before publishing.'}</p><div className="ds-studio-foot"><b>{format(product.price || 0)}</b><span>{product.stock ?? 0} units</span><span>Review draft <ChevronRight size={13} /></span></div></div>
                   </button>
                 ))}</div>
@@ -570,7 +571,7 @@ export default function AIDropshipping() {
           <section className="ds-modal ds-preview-modal" role="dialog" aria-modal="true" aria-label="Product preview" onClick={event => event.stopPropagation()}>
             <div className="ds-modal-head"><div><h3>Shopper preview</h3><p>This remains a private draft until you publish it.</p></div><button className="ds-icon-button" onClick={() => setSelectedCandidate(null)} aria-label="Close"><X size={17} /></button></div>
             <div className="ds-shopper-preview">
-              {selectedCandidate.imageUrl && <img src={selectedCandidate.imageUrl} alt={selectedCandidate.productName} onError={event => { event.currentTarget.style.display = 'none'; }} />}
+              <ProductImageGallery className="ds-shopper-preview-image" product={{ image: selectedCandidate.imageUrl }} alt={selectedCandidate.productName} showControls={false} />
               <div><StatusPill tone="amber">Preview only</StatusPill><h2>{selectedCandidate.content?.title || selectedCandidate.productName}</h2><p>{selectedCandidate.content?.description || selectedCandidate.verifiedFacts?.join(' ') || 'Add verified product details before publication.'}</p><strong>{format(selectedCandidate.retailPrice || 0)}</strong></div>
             </div>
             {selectedCandidate.content?.bullets?.length > 0 && <ul className="ds-preview-list">{selectedCandidate.content.bullets.map((bullet, index) => <li key={index}>{bullet}</li>)}</ul>}

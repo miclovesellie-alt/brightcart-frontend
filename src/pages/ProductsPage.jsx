@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useStore } from '../context/StoreContext';
 import { useCurrency } from '../context/CurrencyContext';
+import ProductImageGallery from '../components/ProductImageGallery';
+import { categoryLabel } from '../utils/productImages';
 import { Search, Star, ShoppingCart, Filter, ChevronDown } from 'lucide-react';
 
 const CATEGORIES = [
@@ -75,14 +77,7 @@ function ProductCard({ product, onClick }) {
         e.currentTarget.style.boxShadow = 'none';
       }}
     >
-      <div className="product-img-wrap" style={{ height: '200px', background: '#111118', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-        <img
-          src={product.image}
-          alt={product.name}
-          style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '12px', transition: 'transform 0.4s ease' }}
-          onError={(e) => { e.target.style.display = 'none'; e.target.parentNode.innerHTML = '<span style="font-size:48px">📦</span>'; }}
-        />
-      </div>
+      <ProductImageGallery product={product} alt={product.name} className="product-img-wrap" style={{ height: '200px', background: '#111118', borderRadius: '8px' }} imageStyle={{ padding: '12px', transition: 'transform 0.4s ease' }} />
 
       {product.tag && (
         <span style={{
@@ -165,6 +160,12 @@ export default function ProductsPage() {
   const [search, setSearch] = useState('');
   const [visibleCount, setVisibleCount] = useState(12);
   const [sortOpen, setSortOpen] = useState(false);
+  const categories = [
+    ...CATEGORIES,
+    ...[...new Set(products.map(product => product.category).filter(Boolean))]
+      .filter(value => !CATEGORIES.some(category => category.value === value))
+      .map(value => ({ label: categoryLabel(value), value })),
+  ];
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 800);
@@ -239,7 +240,7 @@ export default function ProductsPage() {
 
           {/* Category Pills */}
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {CATEGORIES.map(cat => (
+            {categories.map(cat => (
               <button
                 key={cat.value}
                 onClick={() => { setActiveCategory(cat.value); setVisibleCount(12); }}

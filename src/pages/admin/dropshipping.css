@@ -152,7 +152,7 @@
 .ds-modal-actions { justify-content: flex-end; margin-top: 16px; }
 .ds-modal-actions button { font-size: 10px; }
 .ds-shopper-preview { align-items: flex-start; border: 1px solid #e8edf3; border-radius: 12px; display: flex; gap: 15px; overflow: hidden; padding: 13px; }
-.ds-shopper-preview img { background: #f8fafc; border-radius: 9px; max-height: 190px; object-fit: contain; width: 36%; }
+.ds-shopper-preview-image { background: #f8fafc; border-radius: 9px; flex: 0 0 36%; height: 190px; }
 .ds-shopper-preview > div { flex: 1; min-width: 0; }
 .ds-shopper-preview h2 { color: #0f172a; font-size: 18px; line-height: 1.3; margin: 10px 0 7px; }
 .ds-shopper-preview p { color: #64748b; font-size: 11px; line-height: 1.6; }
@@ -221,5 +221,5 @@
   .ds-modal-actions { align-items: stretch; flex-direction: column-reverse; }
   .ds-modal-actions button { width: 100%; }
   .ds-shopper-preview { flex-direction: column; }
-  .ds-shopper-preview img { max-height: 170px; width: 100%; }
+  .ds-shopper-preview-image { flex-basis: auto; height: 170px; width: 100%; }
 }

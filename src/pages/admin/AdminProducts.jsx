@@ -1,203 +1,233 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { useCurrency } from '../../context/CurrencyContext';
 import { isSampleProduct } from '../../utils/catalog';
-import { Search, Plus, Edit2, Trash2, X } from 'lucide-react';
+import { categoryLabel, categorySlug, getProductImages } from '../../utils/productImages';
+import ProductImageGallery from '../../components/ProductImageGallery';
+import { Search, Plus, Edit2, Trash2, X, ImagePlus } from 'lucide-react';
 
 const CATEGORIES = [
-  { label: 'All',                slug: 'All' },
-  { label: 'Phones',             slug: 'phones' },
-  { label: 'Phone Accessories',  slug: 'phone-accessories' },
+  { label: 'Phones', slug: 'phones' },
+  { label: 'Phone Accessories', slug: 'phone-accessories' },
   { label: 'Laptop Accessories', slug: 'laptop-accessories' },
-  { label: 'Electrical',         slug: 'electrical' },
+  { label: 'Electrical', slug: 'electrical' },
 ];
 
 const STATUS_OPTIONS = ['Active', 'Draft', 'Out of Stock'];
-
-const PRODUCT_ICONS = [
-  { label: 'Phone',    value: 'phone'    },
-  { label: 'Laptop',   value: 'laptop'   },
-  { label: 'Earbuds',  value: 'earbuds'  },
-  { label: 'Charger',  value: 'charger'  },
-  { label: 'Monitor',  value: 'monitor'  },
-  { label: 'Keyboard', value: 'keyboard' },
-  { label: 'Mouse',    value: 'mouse'    },
-  { label: 'Hub',      value: 'hub'      },
-  { label: 'Speaker',  value: 'speaker'  },
-  { label: 'Fan',      value: 'fan'      },
-  { label: 'Watch',    value: 'watch'    },
-  { label: 'Case',     value: 'case'     },
-];
-
-const ICON_DISPLAY = {
-  phone: '📱', laptop: '💻', earbuds: '🎧', charger: '🔋',
-  monitor: '🖥', keyboard: '⌨', mouse: '🖱', hub: '🔌',
-  speaker: '🔊', fan: '💨', watch: '⌚', case: '📦',
+const EMPTY_FORM = {
+  name: '', category: 'phones', price: '', originalPrice: '', cost: '', shippingCost: '0',
+  stock: '', description: '', supplier: '', status: 'Active', sku: '', tag: '', featured: false, images: [''],
 };
 
-function getIcon(p) {
-  if (p.icon && ICON_DISPLAY[p.icon]) return ICON_DISPLAY[p.icon];
-  if (p.image && !p.image.startsWith('/')) return p.image; // legacy emoji stored directly
-  return '📦';
+function unitCost(product) {
+  return Number(product.supplierDetails?.unitCost ?? product.cost ?? 0);
 }
 
-const EMPTY_FORM = {
-  name: '', category: 'phones', price: '', originalPrice: '', cost: '',
-  stock: '', description: '', supplier: '', status: 'Active',
-  sku: '', icon: 'phone',
-};
+function shippingCost(product) {
+  return Number(product.supplierDetails?.shippingCost ?? 0);
+}
+
+function hasRecordedCost(product) {
+  return product.supplierDetails?.unitCost !== undefined || product.cost !== undefined;
+}
+
+function productProfit(product) {
+  if (!hasRecordedCost(product)) return null;
+  return Number(product.price || 0) - unitCost(product) - shippingCost(product);
+}
+
+function isValidImageUrl(value) {
+  if (!value) return true;
+  if (value.startsWith('/')) return true;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' || url.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
 
 export default function AdminProducts() {
   const { adminProducts: products, addProduct, updateProduct, deleteProduct } = useStore();
   const { format } = useCurrency();
-  const [search, setSearch]       = useState('');
-  const [cat, setCat]             = useState('All');
+  const [search, setSearch] = useState('');
+  const [cat, setCat] = useState('All');
   const [showModal, setShowModal] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
-  const [form, setForm]           = useState(EMPTY_FORM);
-  const [deleteId, setDeleteId]   = useState(null);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [deleteId, setDeleteId] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
 
-  const realProducts = products.filter(p => !isSampleProduct(p));
-  const filtered = realProducts.filter(p => {
-    const matchCat = cat === 'All' || p.category === cat;
-    const matchQ   = p.name.toLowerCase().includes(search.toLowerCase());
+  const realProducts = products.filter(product => !isSampleProduct(product));
+  const categories = useMemo(() => {
+    const values = [...CATEGORIES.map(item => item.slug), ...realProducts.map(product => product.category).filter(Boolean)];
+    return [...new Set(values)].map(slug => ({ slug, label: categoryLabel(slug) }));
+  }, [realProducts]);
+  const filtered = realProducts.filter(product => {
+    const matchCat = cat === 'All' || product.category === cat;
+    const matchQ = product.name.toLowerCase().includes(search.toLowerCase());
     return matchCat && matchQ;
   });
 
-  const openNew = () => { setForm(EMPTY_FORM); setEditProduct(null); setShowModal(true); };
-  const openEdit = p => {
+  const openNew = () => { setForm({ ...EMPTY_FORM, images: [''] }); setEditProduct(null); setFormError(''); setShowModal(true); };
+  const openEdit = product => {
+    const images = getProductImages(product);
     setForm({
-      ...EMPTY_FORM, ...p,
-      price:         String(p.price || ''),
-      originalPrice: String(p.originalPrice || ''),
-      cost:          String(p.cost || ''),
-      stock:         String(p.stock || 0),
-      icon:          p.icon || 'phone',
+      ...EMPTY_FORM,
+      ...product,
+      category: product.category || 'phones',
+      price: String(product.price ?? ''),
+      originalPrice: String(product.originalPrice ?? ''),
+      cost: String(product.supplierDetails?.unitCost ?? product.cost ?? ''),
+      shippingCost: String(product.supplierDetails?.shippingCost ?? '0'),
+      stock: String(product.stock ?? 0),
+      sku: product.sku || '',
+      tag: product.tag || '',
+      featured: Boolean(product.featured),
+      images: images.length ? images : [''],
     });
-    setEditProduct(p);
+    setEditProduct(product);
+    setFormError('');
     setShowModal(true);
   };
-  const closeModal = () => { setShowModal(false); setEditProduct(null); };
+  const closeModal = () => { if (!saving) { setShowModal(false); setEditProduct(null); setFormError(''); } };
 
-  const handleSave = () => {
+  const F = (key, value) => setForm(current => ({ ...current, [key]: value }));
+  const updateImage = (index, value) => setForm(current => ({
+    ...current,
+    images: current.images.map((image, imageIndex) => imageIndex === index ? value : image),
+  }));
+  const removeImage = index => setForm(current => ({
+    ...current,
+    images: current.images.length === 1 ? [''] : current.images.filter((_, imageIndex) => imageIndex !== index),
+  }));
+
+  const handleSave = async () => {
+    const name = form.name.trim();
+    const category = categorySlug(form.category);
+    const price = Number(form.price);
+    const cost = Number(form.cost);
+    const shipping = Number(form.shippingCost || 0);
+    const stock = Number(form.stock || 0);
+    const images = [...new Set(form.images.map(value => value.trim()).filter(Boolean))];
+
+    if (!name || !category || !Number.isFinite(price) || price <= 0) {
+      setFormError('Add a product name, category, and selling price greater than zero.');
+      return;
+    }
+    if (form.cost === '' || !Number.isFinite(cost) || cost < 0 || !Number.isFinite(shipping) || shipping < 0) {
+      setFormError('Enter a valid supplier unit cost and shipping cost so profit can be calculated.');
+      return;
+    }
+    if (!Number.isFinite(stock) || stock < 0) {
+      setFormError('Stock must be zero or more.');
+      return;
+    }
+    if (images.some(image => !isValidImageUrl(image))) {
+      setFormError('Use a complete http(s) image URL or a site path beginning with /.');
+      return;
+    }
+
+    const supplierDetails = {
+      ...(editProduct?.supplierDetails || {}),
+      unitCost: cost,
+      shippingCost: shipping,
+    };
     const data = {
       ...form,
-      price:         parseFloat(form.price) || 0,
-      originalPrice: parseFloat(form.originalPrice) || parseFloat(form.price) || 0,
-      cost:          parseFloat(form.cost) || 0,
-      stock:         parseInt(form.stock) || 0,
+      name,
+      category,
+      price,
+      originalPrice: form.originalPrice === '' ? price : Math.max(0, Number(form.originalPrice) || 0),
+      cost,
+      supplierDetails,
+      stock: Math.floor(stock),
+      images,
+      image: images[0] || '',
+      sku: form.sku.trim() || `${category.slice(0, 3).toUpperCase()}-${Date.now().toString().slice(-6)}`,
+      tag: form.tag.trim(),
+      featured: Boolean(form.featured),
+      status: form.status,
     };
-    if (editProduct) updateProduct({ ...editProduct, ...data });
-    else addProduct(data);
-    closeModal();
+
+    setSaving(true);
+    setFormError('');
+    try {
+      if (editProduct) await updateProduct({ ...editProduct, ...data });
+      else await addProduct(data);
+      setShowModal(false);
+      setEditProduct(null);
+    } catch (error) {
+      setFormError(error.message || 'Could not save this product. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const margin = p => {
-    if (!p.cost || !p.price) return null;
-    return Math.round(((p.price - p.cost) / p.price) * 100);
-  };
-
-  const F = (key, val) => setForm(f => ({ ...f, [key]: val }));
+  const margin = product => product.price > 0 && productProfit(product) !== null ? Math.round(productProfit(product) / Number(product.price) * 100) : null;
+  const previewPrice = Number(form.price);
+  const previewLandedCost = Number(form.cost || 0) + Number(form.shippingCost || 0);
+  const previewProfit = previewPrice - previewLandedCost;
+  const previewStock = Math.max(0, Number(form.stock) || 0);
+  const previewReady = form.price !== '' && previewPrice > 0 && form.cost !== '' && Number.isFinite(previewLandedCost);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ flex: 1 }}>
           <h2 style={{ fontWeight: 800, fontSize: 18, color: '#0f172a', margin: 0 }}>Products</h2>
-          <p style={{ color: '#64748b', fontSize: 12, margin: '2px 0 0' }}>
-            {realProducts.length} products &mdash; {filtered.length} shown
-          </p>
+          <p style={{ color: '#64748b', fontSize: 12, margin: '2px 0 0' }}>{realProducts.length} products &mdash; {filtered.length} shown</p>
         </div>
-        <button
-          onClick={openNew}
-          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
-        >
+        <button onClick={openNew} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
           <Plus size={15} /> Add Product
         </button>
       </div>
 
-      {/* Filters */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
           <Search size={13} color="#94a3b8" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
-          <input
-            value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Search products..."
-            style={{ width: '100%', padding: '8px 12px 8px 30px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12, color: '#0f172a', outline: 'none', boxSizing: 'border-box' }}
-          />
+          <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search products..." style={{ width: '100%', padding: '8px 12px 8px 30px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12, color: '#0f172a', outline: 'none', boxSizing: 'border-box' }} />
         </div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {CATEGORIES.map(({ label, slug }) => (
-            <button key={slug} onClick={() => setCat(slug)}
-              style={{
-                padding: '6px 14px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                background: cat === slug ? '#2563eb' : '#fff',
-                color: cat === slug ? '#fff' : '#374151',
-                border: `1px solid ${cat === slug ? '#2563eb' : '#e2e8f0'}`,
-              }}
-            >{label}</button>
+          {[{ label: 'All', slug: 'All' }, ...categories].map(({ label, slug }) => (
+            <button key={slug} onClick={() => setCat(slug)} style={{ padding: '6px 14px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', background: cat === slug ? '#2563eb' : '#fff', color: cat === slug ? '#fff' : '#374151', border: `1px solid ${cat === slug ? '#2563eb' : '#e2e8f0'}` }}>{label}</button>
           ))}
         </div>
       </div>
 
-      {/* Table */}
       <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e8edf3', overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse', minWidth: 700 }}>
-            <thead>
-              <tr style={{ background: '#f8fafc' }}>
-                {['Product', 'Category', 'Price', 'Cost', 'Margin', 'Stock', 'Supplier', 'Status', 'Actions'].map(h => (
-                  <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#64748b', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h.toUpperCase()}</th>
-                ))}
-              </tr>
-            </thead>
+          <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse', minWidth: 780 }}>
+            <thead><tr style={{ background: '#f8fafc' }}>
+              {['Product', 'Category', 'Price', 'Landed cost', 'Profit / unit', 'Margin', 'Stock', 'Supplier', 'Status', 'Actions'].map(heading => (
+                <th key={heading} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#64748b', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{heading.toUpperCase()}</th>
+              ))}
+            </tr></thead>
             <tbody>
-              {filtered.length === 0 ? (
-                <tr><td colSpan={9} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>No products found</td></tr>
-              ) : filtered.map(p => {
-                const m = margin(p);
+              {filtered.length === 0 ? <tr><td colSpan={10} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>No products found</td></tr> : filtered.map(product => {
+                const productMargin = margin(product);
+                const profit = productProfit(product);
                 const statusColors = { Active: '#16a34a', Draft: '#f59e0b', 'Out of Stock': '#ef4444' };
-                const sc = statusColors[p.status] || '#64748b';
+                const statusColor = statusColors[product.status] || '#64748b';
                 return (
-                  <tr key={p.id} style={{ borderTop: '1px solid #f8fafc' }}>
-                    <td style={{ padding: '10px 14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                        <div style={{ width: 34, height: 34, borderRadius: 8, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
-                          {getIcon(p)}
-                        </div>
-                        <div>
-                          <div style={{ fontWeight: 600, color: '#0f172a', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
-                          <div style={{ fontSize: 10, color: '#94a3b8' }}>SKU: {p.sku || String(p.id).slice(0, 8)}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td style={{ padding: '10px 14px', color: '#64748b', whiteSpace: 'nowrap' }}>{p.category}</td>
-                    <td style={{ padding: '10px 14px', fontWeight: 700, color: '#2563eb' }}>{format(p.price)}</td>
-                    <td style={{ padding: '10px 14px', color: '#64748b' }}>{p.cost ? format(p.cost) : '—'}</td>
-                    <td style={{ padding: '10px 14px' }}>
-                      {m !== null ? (
-                        <span style={{ background: m > 30 ? '#f0fdf4' : m > 15 ? '#fffbeb' : '#fef2f2', color: m > 30 ? '#16a34a' : m > 15 ? '#d97706' : '#ef4444', borderRadius: 6, padding: '2px 7px', fontWeight: 700, fontSize: 10 }}>{m}%</span>
-                      ) : '—'}
-                    </td>
-                    <td style={{ padding: '10px 14px', fontWeight: 600, color: (p.stock || 0) < 5 ? '#ef4444' : '#374151' }}>
-                      {p.stock ?? 0}
-                      {(p.stock || 0) < 5 && p.stock !== undefined && <span style={{ marginLeft: 4, fontSize: 9, color: '#ef4444' }}>LOW</span>}
-                    </td>
-                    <td style={{ padding: '10px 14px', color: '#64748b' }}>{p.supplier || 'Not assigned'}</td>
-                    <td style={{ padding: '10px 14px' }}>
-                      <span style={{ background: sc + '18', color: sc, borderRadius: 20, padding: '2px 9px', fontWeight: 700, fontSize: 10 }}>{p.status || 'Active'}</span>
-                    </td>
-                    <td style={{ padding: '10px 14px' }}>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button onClick={() => openEdit(p)} style={{ padding: '5px 9px', borderRadius: 6, background: '#eff6ff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                          <Edit2 size={12} color="#2563eb" />
-                        </button>
-                        <button onClick={() => setDeleteId(p.id)} style={{ padding: '5px 9px', borderRadius: 6, background: '#fef2f2', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                          <Trash2 size={12} color="#ef4444" />
-                        </button>
-                      </div>
-                    </td>
+                  <tr key={product.id} style={{ borderTop: '1px solid #f8fafc' }}>
+                    <td style={{ padding: '10px 14px' }}><div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                      <ProductImageGallery product={product} alt={product.name} showControls={false} style={{ width: 36, height: 36, flex: '0 0 36px', borderRadius: 8, background: '#f1f5f9' }} imageStyle={{ padding: 3 }} />
+                      <div><div style={{ fontWeight: 600, color: '#0f172a', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.name}</div><div style={{ fontSize: 10, color: '#94a3b8' }}>SKU: {product.sku || String(product.id).slice(0, 8)}</div></div>
+                    </div></td>
+                    <td style={{ padding: '10px 14px', color: '#64748b', whiteSpace: 'nowrap' }}>{categoryLabel(product.category)}</td>
+                    <td style={{ padding: '10px 14px', fontWeight: 700, color: '#2563eb' }}>{format(product.price)}</td>
+                    <td style={{ padding: '10px 14px', color: '#64748b' }}>{hasRecordedCost(product) ? format(unitCost(product) + shippingCost(product)) : '—'}</td>
+                    <td style={{ padding: '10px 14px', color: profit !== null && profit >= 0 ? '#16a34a' : '#dc2626', fontWeight: 700 }}>{profit === null ? '—' : format(profit)}</td>
+                    <td style={{ padding: '10px 14px' }}>{productMargin !== null ? <span style={{ background: productMargin > 30 ? '#f0fdf4' : productMargin > 15 ? '#fffbeb' : '#fef2f2', color: productMargin > 30 ? '#16a34a' : productMargin > 15 ? '#d97706' : '#ef4444', borderRadius: 6, padding: '2px 7px', fontWeight: 700, fontSize: 10 }}>{productMargin}%</span> : '—'}</td>
+                    <td style={{ padding: '10px 14px', fontWeight: 600, color: (product.stock || 0) < 5 ? '#ef4444' : '#374151' }}>{product.stock ?? 0}{(product.stock || 0) < 5 && product.stock !== undefined && <span style={{ marginLeft: 4, fontSize: 9, color: '#ef4444' }}>LOW</span>}</td>
+                    <td style={{ padding: '10px 14px', color: '#64748b' }}>{product.supplier || 'Not assigned'}</td>
+                    <td style={{ padding: '10px 14px' }}><span style={{ background: `${statusColor}18`, color: statusColor, borderRadius: 20, padding: '2px 9px', fontWeight: 700, fontSize: 10 }}>{product.status || 'Active'}</span></td>
+                    <td style={{ padding: '10px 14px' }}><div style={{ display: 'flex', gap: 6 }}>
+                      <button aria-label={`Edit ${product.name}`} onClick={() => openEdit(product)} style={{ padding: '5px 9px', borderRadius: 6, background: '#eff6ff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Edit2 size={12} color="#2563eb" /></button>
+                      <button aria-label={`Delete ${product.name}`} onClick={() => setDeleteId(product.id)} style={{ padding: '5px 9px', borderRadius: 6, background: '#fef2f2', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Trash2 size={12} color="#ef4444" /></button>
+                    </div></td>
                   </tr>
                 );
               })}
@@ -206,141 +236,69 @@ export default function AdminProducts() {
         </div>
       </div>
 
-      {/* Add / Edit Modal */}
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} onClick={closeModal} />
-          <div style={{ position: 'relative', background: '#fff', borderRadius: 16, width: '100%', maxWidth: 540, maxHeight: '90vh', overflowY: 'auto', padding: 24, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+          <div style={{ position: 'relative', background: '#fff', borderRadius: 16, width: '100%', maxWidth: 620, maxHeight: '90vh', overflowY: 'auto', padding: 24, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ fontWeight: 800, fontSize: 16, color: '#0f172a', margin: 0 }}>{editProduct ? 'Edit Product' : 'Add New Product'}</h3>
-              <button onClick={closeModal} style={{ background: '#f1f5f9', border: 'none', borderRadius: 8, padding: 7, cursor: 'pointer', display: 'flex' }}><X size={16} color="#64748b" /></button>
+              <div><h3 style={{ fontWeight: 800, fontSize: 16, color: '#0f172a', margin: 0 }}>{editProduct ? 'Edit Product' : 'Add New Product'}</h3><p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 12 }}>Add accurate pricing, stock, and product photos.</p></div>
+              <button aria-label="Close" onClick={closeModal} style={{ background: '#f1f5f9', border: 'none', borderRadius: 8, padding: 7, cursor: 'pointer', display: 'flex' }}><X size={16} color="#64748b" /></button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-              {/* Product Name */}
-              <div style={{ gridColumn: '1/-1' }}>
-                <label style={lbl}>PRODUCT NAME *</label>
-                <input value={form.name} onChange={e => F('name', e.target.value)} placeholder="e.g. ProBuds X3 Wireless Earbuds" style={inp} />
-              </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 14 }}>
+              <div style={{ gridColumn: '1/-1' }}><label style={lbl}>PRODUCT NAME *</label><input autoFocus value={form.name} onChange={event => F('name', event.target.value)} placeholder="e.g. Wireless noise-cancelling headphones" style={inp} /></div>
+              <div><label style={lbl}>CATEGORY *</label><input list="shoppercart-product-categories" value={form.category.replace(/[-_]+/g, ' ')} onChange={event => F('category', event.target.value)} placeholder="Choose or add a category" style={inp} /><datalist id="shoppercart-product-categories">{categories.map(item => <option key={item.slug} value={item.label} />)}</datalist><small style={hint}>Choose a suggestion or type a new category.</small></div>
+              <div><label style={lbl}>SKU</label><input value={form.sku} onChange={event => F('sku', event.target.value)} placeholder="Generated if left blank" style={inp} /></div>
+              <div><label style={lbl}>SELLING PRICE *</label><input type="number" min="0.01" step="0.01" value={form.price} onChange={event => F('price', event.target.value)} placeholder="129.00" style={inp} /></div>
+              <div><label style={lbl}>SUPPLIER UNIT COST *</label><input type="number" min="0" step="0.01" value={form.cost} onChange={event => F('cost', event.target.value)} placeholder="45.00" style={inp} /></div>
+              <div><label style={lbl}>INBOUND SHIPPING / UNIT</label><input type="number" min="0" step="0.01" value={form.shippingCost} onChange={event => F('shippingCost', event.target.value)} placeholder="0.00" style={inp} /></div>
+              <div><label style={lbl}>COMPARE-AT PRICE</label><input type="number" min="0" step="0.01" value={form.originalPrice} onChange={event => F('originalPrice', event.target.value)} placeholder={form.price || '159.00'} style={inp} /><small style={hint}>Optional crossed-out reference price.</small></div>
+              <div><label style={lbl}>STOCK QUANTITY</label><input type="number" min="0" step="1" value={form.stock} onChange={event => F('stock', event.target.value)} placeholder="0" style={inp} /></div>
+              <div><label style={lbl}>SUPPLIER</label><input value={form.supplier} onChange={event => F('supplier', event.target.value)} placeholder="Supplier name" style={inp} /></div>
+              <div><label style={lbl}>STATUS</label><select value={form.status} onChange={event => F('status', event.target.value)} style={inp}>{STATUS_OPTIONS.map(status => <option key={status}>{status}</option>)}</select></div>
+              <div><label style={lbl}>PRODUCT TAG</label><input value={form.tag} onChange={event => F('tag', event.target.value)} placeholder="New, Sale, Limited..." style={inp} /></div>
+              <label style={{ gridColumn: '1/-1', display: 'flex', alignItems: 'center', gap: 9, color: '#334155', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}><input type="checkbox" checked={form.featured} onChange={event => F('featured', event.target.checked)} /> Feature this product on the home page</label>
 
-              {/* Selling Price */}
-              <div>
-                <label style={lbl}>SELLING PRICE ($) *</label>
-                <input type="number" value={form.price} onChange={e => F('price', e.target.value)} placeholder="129.00" style={inp} />
-              </div>
-
-              {/* Supplier Cost */}
-              <div>
-                <label style={lbl}>SUPPLIER COST ($)</label>
-                <input type="number" value={form.cost} onChange={e => F('cost', e.target.value)} placeholder="45.00" style={inp} />
-              </div>
-
-              {/* Compare Price */}
-              <div>
-                <label style={lbl}>COMPARE PRICE ($)</label>
-                <input type="number" value={form.originalPrice} onChange={e => F('originalPrice', e.target.value)} placeholder="159.00" style={inp} />
-              </div>
-
-              {/* Stock */}
-              <div>
-                <label style={lbl}>STOCK QUANTITY</label>
-                <input type="number" value={form.stock} onChange={e => F('stock', e.target.value)} placeholder="100" style={inp} />
-              </div>
-
-              {/* Category */}
-              <div>
-                <label style={lbl}>CATEGORY</label>
-                <select value={form.category} onChange={e => F('category', e.target.value)} style={inp}>
-                  {CATEGORIES.filter(c => c.slug !== 'All').map(c => (
-                    <option key={c.slug} value={c.slug}>{c.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Supplier */}
-              <div>
-                <label style={lbl}>SUPPLIER</label>
-                <input value={form.supplier} onChange={e => F('supplier', e.target.value)} placeholder="Enter a verified supplier (optional)" style={inp} />
-              </div>
-
-              {/* Status */}
-              <div>
-                <label style={lbl}>STATUS</label>
-                <select value={form.status} onChange={e => F('status', e.target.value)} style={inp}>
-                  {STATUS_OPTIONS.map(s => <option key={s}>{s}</option>)}
-                </select>
-              </div>
-
-              {/* Margin preview */}
-              {form.price && form.cost && (
-                <div style={{ gridColumn: '1/-1', background: '#f0fdf4', borderRadius: 8, padding: '10px 14px', display: 'flex', gap: 24 }}>
-                  <div>
-                    <div style={{ fontSize: 10, color: '#64748b' }}>Margin</div>
-                    <div style={{ fontWeight: 800, color: '#16a34a', fontSize: 18 }}>
-                      {Math.round(((parseFloat(form.price) - parseFloat(form.cost)) / parseFloat(form.price)) * 100)}%
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 10, color: '#64748b' }}>Profit / unit</div>
-                    <div style={{ fontWeight: 800, color: '#16a34a', fontSize: 18 }}>
-                      ${(parseFloat(form.price) - parseFloat(form.cost)).toFixed(2)}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Description */}
-              <div style={{ gridColumn: '1/-1' }}>
-                <label style={lbl}>DESCRIPTION</label>
-                <textarea value={form.description} onChange={e => F('description', e.target.value)} rows={3} placeholder="Product description..." style={{ ...inp, resize: 'vertical' }} />
-              </div>
-
-              {/* Icon picker */}
-              <div style={{ gridColumn: '1/-1' }}>
-                <label style={lbl}>PRODUCT ICON</label>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {PRODUCT_ICONS.map(({ label, value }) => (
-                    <button
-                      key={value}
-                      onClick={() => F('icon', value)}
-                      title={label}
-                      style={{
-                        fontSize: 20, width: 40, height: 40, borderRadius: 8, cursor: 'pointer',
-                        border: form.icon === value ? '2px solid #2563eb' : '1px solid #e2e8f0',
-                        background: form.icon === value ? '#eff6ff' : '#f8fafc',
-                      }}
-                    >
-                      {ICON_DISPLAY[value]}
-                    </button>
-                  ))}
+              <div style={{ gridColumn: '1/-1', background: '#f8fafc', border: '1px solid #e8edf3', borderRadius: 10, padding: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}><div><label style={{ ...lbl, marginBottom: 2 }}>PRODUCT IMAGES</label><small style={hint}>Paste direct, publicly accessible image URLs. First image is the main photo.</small></div><button type="button" onClick={() => F('images', [...form.images, ''])} style={{ display: 'flex', alignItems: 'center', gap: 5, border: '1px solid #bfdbfe', color: '#1d4ed8', background: '#eff6ff', borderRadius: 7, padding: '7px 10px', fontWeight: 700, fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap' }}><ImagePlus size={14} /> Add photo</button></div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                  {form.images.map((image, index) => <div key={index} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                    <div style={{ flex: 1 }}><input type="url" value={image} onChange={event => updateImage(index, event.target.value)} placeholder="https://example.com/product-image.jpg" style={inp} /></div>
+                    <ProductImageGallery product={{ image }} alt={`Product preview ${index + 1}`} showControls={false} style={{ width: 46, height: 46, flex: '0 0 46px', borderRadius: 7, border: '1px solid #e2e8f0', background: '#fff' }} />
+                    <button type="button" aria-label={`Remove image ${index + 1}`} onClick={() => removeImage(index)} style={{ border: 0, color: '#64748b', background: 'transparent', padding: 6, cursor: 'pointer' }}><X size={16} /></button>
+                  </div>)}
                 </div>
               </div>
+
+              <div style={{ gridColumn: '1/-1', background: previewReady && previewProfit < 0 ? '#fff7ed' : '#f0fdf4', borderRadius: 9, padding: '12px 14px' }}>
+                <div style={{ fontSize: 10, color: '#64748b', fontWeight: 700, letterSpacing: '.04em', marginBottom: 8 }}>ESTIMATED UNIT ECONOMICS</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+                  <Metric label="Landed unit cost" value={form.cost !== '' ? format(previewLandedCost) : '—'} />
+                  <Metric label="Profit per unit" value={previewReady ? format(previewProfit) : '—'} color={previewProfit >= 0 ? '#16a34a' : '#dc2626'} />
+                  <Metric label="Gross margin" value={previewReady ? `${(previewProfit / previewPrice * 100).toFixed(1)}%` : '—'} color={previewProfit >= 0 ? '#16a34a' : '#dc2626'} />
+                </div>
+                <div style={{ borderTop: '1px solid rgba(148,163,184,.25)', marginTop: 10, paddingTop: 8, fontSize: 11, color: '#475569' }}>Potential profit at current stock ({Math.floor(previewStock)}): <strong style={{ color: previewProfit >= 0 ? '#15803d' : '#b91c1c' }}>{previewReady ? format(previewProfit * previewStock) : '—'}</strong></div>
+                <small style={{ ...hint, marginTop: 4 }}>Before payment fees, store expenses, and customer delivery charges.</small>
+              </div>
+
+              <div style={{ gridColumn: '1/-1' }}><label style={lbl}>PRODUCT DESCRIPTION</label><textarea value={form.description} onChange={event => F('description', event.target.value)} rows={4} placeholder="Describe the product's real features, materials, compatibility, and what is included." style={{ ...inp, resize: 'vertical' }} /></div>
             </div>
 
+            {formError && <div role="alert" style={{ marginTop: 14, color: '#b91c1c', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '9px 11px', fontSize: 12 }}>{formError}</div>}
             <div style={{ display: 'flex', gap: 10, marginTop: 20, paddingTop: 16, borderTop: '1px solid #f1f5f9' }}>
-              <button onClick={closeModal} style={{ flex: 1, padding: 10, borderRadius: 9, border: '1px solid #e2e8f0', background: '#fff', color: '#374151', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
-                Cancel
-              </button>
-              <button onClick={handleSave} style={{ flex: 2, padding: 10, borderRadius: 9, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-                {editProduct ? 'Save Changes' : 'Add Product'}
-              </button>
+              <button onClick={closeModal} disabled={saving} style={{ flex: 1, padding: 10, borderRadius: 9, border: '1px solid #e2e8f0', background: '#fff', color: '#374151', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleSave} disabled={saving} style={{ flex: 2, padding: 10, borderRadius: 9, border: 'none', background: saving ? '#93c5fd' : '#2563eb', color: '#fff', fontWeight: 700, fontSize: 13, cursor: saving ? 'wait' : 'pointer' }}>{saving ? 'Saving…' : editProduct ? 'Save Changes' : 'Add Product'}</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Delete Confirm */}
       {deleteId && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} onClick={() => setDeleteId(null)} />
           <div style={{ position: 'relative', background: '#fff', borderRadius: 14, padding: 24, maxWidth: 360, width: '100%', textAlign: 'center' }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>🗑</div>
-            <h3 style={{ fontWeight: 800, color: '#0f172a', margin: '0 0 8px' }}>Delete Product?</h3>
-            <p style={{ color: '#64748b', fontSize: 13, margin: '0 0 20px' }}>This will permanently remove this product from your store.</p>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setDeleteId(null)} style={{ flex: 1, padding: 10, borderRadius: 9, border: '1px solid #e2e8f0', background: '#fff', color: '#374151', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
-              <button onClick={() => { deleteProduct(deleteId); setDeleteId(null); }} style={{ flex: 1, padding: 10, borderRadius: 9, border: 'none', background: '#ef4444', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Delete</button>
-            </div>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>🗑</div><h3 style={{ fontWeight: 800, color: '#0f172a', margin: '0 0 8px' }}>Delete Product?</h3><p style={{ color: '#64748b', fontSize: 13, margin: '0 0 20px' }}>This will permanently remove this product from your store.</p>
+            <div style={{ display: 'flex', gap: 10 }}><button onClick={() => setDeleteId(null)} style={{ flex: 1, padding: 10, borderRadius: 9, border: '1px solid #e2e8f0', background: '#fff', color: '#374151', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button><button onClick={async () => { await deleteProduct(deleteId); setDeleteId(null); }} style={{ flex: 1, padding: 10, borderRadius: 9, border: 'none', background: '#ef4444', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Delete</button></div>
           </div>
         </div>
       )}
@@ -348,6 +306,10 @@ export default function AdminProducts() {
   );
 }
 
-// shared input/label styles
+function Metric({ label, value, color = '#0f172a' }) {
+  return <div><div style={{ fontSize: 10, color: '#64748b', marginBottom: 2 }}>{label}</div><div style={{ fontSize: 15, fontWeight: 800, color, overflowWrap: 'anywhere' }}>{value}</div></div>;
+}
+
 const lbl = { fontSize: 11, fontWeight: 700, color: '#374151', marginBottom: 5, display: 'block', letterSpacing: '0.04em' };
-const inp = { width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, outline: 'none', boxSizing: 'border-box', background: '#fff', color: '#0f172a' };
+const inp = { width: '100%', minWidth: 0, padding: '9px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, outline: 'none', boxSizing: 'border-box', background: '#fff', color: '#0f172a' };
+const hint = { display: 'block', color: '#64748b', fontSize: 10 };

@@ -4,6 +4,7 @@ import { useCurrency } from '../context/CurrencyContext';
 import { formatCategory, isStorefrontProduct } from '../utils/catalog';
 import HeroAssembler from '../components/HeroAssembler';
 import ImageAssembler from '../components/ImageAssembler';
+import ProductImageGallery from '../components/ProductImageGallery';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ChevronDown, Star, ShoppingCart, ArrowRight, Package, Truck, Shield, Headphones } from 'lucide-react';
@@ -268,12 +269,7 @@ function ProductCard({ product, onClick }) {
         e.currentTarget.style.boxShadow = 'none';
       }}
     >
-      <div className="product-img-wrap" style={{ height: '200px', background: '#111118', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <img src={product.image} alt={product.name}
-          style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '12px' }}
-          onError={(e) => { e.target.style.display='none'; e.target.parentNode.innerHTML='<span style="font-size:48px">📦</span>'; }}
-        />
-      </div>
+      <ProductImageGallery product={product} alt={product.name} className="product-img-wrap" style={{ height: '200px', background: '#111118', borderRadius: '8px' }} imageStyle={{ padding: '12px' }} />
       <span style={{ alignSelf: 'flex-start', padding: '3px 10px', borderRadius: '100px', fontSize: '11px', fontWeight: 600, background: c.bg, color: c.color, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
         {product.category.replace('-', ' ')}
       </span>

@@ -3,6 +3,7 @@ import { User, Mail, Lock, LogOut, Package, ShieldAlert, Phone, Globe } from 'lu
 import { useStore } from '../context/StoreContext';
 import { useCurrency } from '../context/CurrencyContext';
 import AirpodsAnimation from '../components/AirpodsAnimation';
+import ProductImageGallery from '../components/ProductImageGallery';
 
 // ── Input style ───────────────────────────────────────────────────────────────
 const inputStyle = {
@@ -149,9 +150,8 @@ export default function AccountPage() {
                           width: '40px', height: '40px',
                           background: '#111118',
                           borderRadius: '8px',
-                          overflow: 'hidden',
                         }}>
-                          <img src={item.product.image} alt={item.product.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} onError={e => { e.target.style.display = 'none'; }} />
+                          <ProductImageGallery product={item.product} alt={item.product.name} showControls={false} style={{ width: '100%', height: '100%', borderRadius: 8 }} imageStyle={{ padding: 4 }} />
                         </div>
                       ))}
                     </div>
