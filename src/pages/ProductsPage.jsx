@@ -36,6 +36,7 @@ function SkeletonCard() {
 
 function ProductCard({ product, onClick }) {
   const { addToCart } = useStore();
+  const { format } = useCurrency();
   const [added, setAdded] = useState(false);
 
   const categoryColors = {
@@ -153,7 +154,6 @@ function ProductCard({ product, onClick }) {
 
 export default function ProductsPage() {
   const { products, navigate } = useStore();
-  const { format } = useCurrency();
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('all');
   const [sortBy, setSortBy] = useState('featured');
