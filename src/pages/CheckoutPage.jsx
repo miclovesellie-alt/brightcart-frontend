@@ -392,11 +392,11 @@ export default function CheckoutPage() {
                 {/* Items List */}
                 <div style={{ marginBottom: '24px' }}>
                   {cart.map(item => (
-                    <div key={item.product.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div key={item.cartKey || item.product.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                       <ProductImageGallery product={item.product} alt={item.product.name} showControls={false} style={{ width: 40, height: 40, background: '#111118', borderRadius: 8, flex: '0 0 40px' }} imageStyle={{ padding: 4 }} />
                       <div style={{ flex: 1, fontSize: '13px' }}>
                         <p style={{ fontWeight: 600, color: '#fff', margin: 0 }}>{item.product.name}</p>
-                        <p style={{ color: '#8892a4', margin: '2px 0 0' }}>Qty: {item.qty}</p>
+                        <p style={{ color: '#8892a4', margin: '2px 0 0' }}>{item.variant?.color ? `Color: ${item.variant.color} · ` : ''}Qty: {item.qty}</p>
                       </div>
                       <span style={{ fontWeight: 700, color: '#4f8ef7', fontSize: '14px' }}>
                         {format(item.product.price * item.qty)}

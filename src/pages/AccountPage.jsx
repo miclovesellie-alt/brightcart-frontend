@@ -146,8 +146,8 @@ export default function AccountPage() {
                       </span>
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
-                      {order.items.map(item => (
-                        <div key={item.product.id} className="account-page__order-thumb" style={{
+                      {order.items.map((item, index) => (
+                        <div key={item.cartKey || `${item.product.id}:${item.variant?.id || item.variant?.color || index}`} className="account-page__order-thumb" style={{
                           width: '40px', height: '40px', minWidth: '40px', minHeight: '40px',
                           background: '#111118',
                           borderRadius: '8px',
@@ -157,6 +157,9 @@ export default function AccountPage() {
                           <ProductImageGallery product={item.product} alt={item.product.name} showControls={false} className="account-page__order-gallery" style={{ width: '40px', height: '40px', maxWidth: '40px', maxHeight: '40px', borderRadius: 8, overflow: 'hidden' }} imageStyle={{ padding: 4 }} />
                         </div>
                       ))}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12, fontSize: 12, color: '#8892a4' }}>
+                      {order.items.map((item, index) => <span key={item.cartKey || `${item.product.id}:${item.variant?.id || item.variant?.color || index}`}>{item.product?.name || 'Product'}{item.variant?.color ? ` · ${item.variant.color}` : ''} × {item.qty || 1}</span>)}
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px' }}>
                       <span style={{ color: '#8892a4' }}>{order.items.reduce((s,i) => s+i.qty, 0)} items</span>

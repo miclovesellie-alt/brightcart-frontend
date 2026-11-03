@@ -118,35 +118,61 @@ export function StoreProvider({ children }) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  const addToCart = useCallback((product, qty = 1) => {
+  const cartKeyFor = (product, variant) => {
+    const variantKey = String(variant?.id || variant?.color || variant?.name || '').trim().toLowerCase();
+    return `${product.id}:${variantKey || 'default'}`;
+  };
+
+  const addToCart = useCallback((product, qty = 1, variant = null) => {
+    const cartKey = cartKeyFor(product, variant);
+    const variantSnapshot = variant ? {
+      id: String(variant.id || variant.color || variant.name || ''),
+      name: String(variant.name || variant.color || ''),
+      color: String(variant.color || variant.name || ''),
+      image: String(variant.image || variant.imageUrl || ''),
+      images: Array.isArray(variant.images) ? variant.images : [],
+      sku: String(variant.sku || ''),
+    } : null;
+    const cartProduct = variantSnapshot ? {
+      ...product,
+      image: variantSnapshot.image || product.image,
+      images: variantSnapshot.images.length ? variantSnapshot.images : product.images,
+    } : product;
     setCart(prev => {
-      const existing = prev.find(item => item.product.id === product.id);
+      const existing = prev.find(item => (item.cartKey || cartKeyFor(item.product, item.variant)) === cartKey);
       if (existing) {
         return prev.map(item =>
-          item.product.id === product.id
+          (item.cartKey || cartKeyFor(item.product, item.variant)) === cartKey
             ? { ...item, qty: item.qty + qty }
             : item
         );
       }
-      return [...prev, { product, qty }];
+      return [...prev, { cartKey, product: cartProduct, variant: variantSnapshot, qty }];
     });
   }, []);
 
-  const removeFromCart = useCallback((productId) => {
-    setCart(prev => prev.filter(item => item.product.id !== productId));
+  const removeFromCart = useCallback((lineKey) => {
+    setCart(prev => prev.filter(item => {
+      const key = item.cartKey || cartKeyFor(item.product, item.variant);
+      if (key === lineKey) return false;
+      return !(String(lineKey) === String(item.product.id) && !item.variant);
+    }));
   }, []);
 
-  const updateQty = useCallback((productId, qty) => {
+  const updateQty = useCallback((lineKey, qty) => {
     if (qty <= 0) {
-      setCart(prev => prev.filter(item => item.product.id !== productId));
+      removeFromCart(lineKey);
     } else {
       setCart(prev =>
         prev.map(item =>
-          item.product.id === productId ? { ...item, qty } : item
+          (item.cartKey || cartKeyFor(item.product, item.variant)) === lineKey
+            || (String(lineKey) === String(item.product.id) && !item.variant)
+            ? { ...item, qty }
+            : item
         )
       );
     }
-  }, []);
+  }, [removeFromCart]);
 
   const placeOrder = useCallback(async (orderData) => {
     const result = await api.placeOrder({
@@ -258,7 +284,7 @@ export function StoreProvider({ children }) {
   }, []);
 
   const cartCount = cart.reduce((sum, item) => sum + item.qty, 0);
-  const cartTotal = cart.reduce((sum, item) => sum + item.product.price * item.qty, 0);
+  const cartTotal = cart.reduce((sum, item) => sum + Number(item.product.price || 0) * item.qty, 0);
 
   return (
     <StoreContext.Provider value={{

@@ -43,7 +43,7 @@ export default function CartPage() {
           {/* Cart Items */}
           <div className="cart-page__items">
             {cart.map(item => (
-              <div key={item.product.id} className="glass cart-page__item-card">
+              <div key={item.cartKey || item.product.id} className="glass cart-page__item-card">
                 <ProductImageGallery
                   product={item.product}
                   alt={item.product.name}
@@ -54,6 +54,7 @@ export default function CartPage() {
                 />
                 <div className="cart-page__item-details">
                   <h3 className="cart-page__item-name">{item.product.name}</h3>
+                  {item.variant?.color && <p className="cart-page__item-category">Color: {item.variant.color}</p>}
                   <p className="cart-page__item-category">{item.product.category.replace('-', ' ')}</p>
                   <div className="cart-page__item-pricing">
                     <span>{format(item.product.price)}</span>
@@ -64,13 +65,13 @@ export default function CartPage() {
                 </div>
                 <div className="cart-page__item-actions">
                   <div className="cart-page__quantity" aria-label="Quantity controls">
-                    <button type="button" aria-label={`Decrease ${item.product.name} quantity`} onClick={() => updateQty(item.product.id, item.qty - 1)}>−</button>
+                    <button type="button" aria-label={`Decrease ${item.product.name} quantity`} onClick={() => updateQty(item.cartKey || item.product.id, item.qty - 1)}>−</button>
                     <span>{item.qty}</span>
-                    <button type="button" aria-label={`Increase ${item.product.name} quantity`} onClick={() => updateQty(item.product.id, item.qty + 1)}>+</button>
+                    <button type="button" aria-label={`Increase ${item.product.name} quantity`} onClick={() => updateQty(item.cartKey || item.product.id, item.qty + 1)}>+</button>
                   </div>
                   <div className="cart-page__item-total">
                     <span>{format(item.product.price * item.qty)}</span>
-                    <button type="button" aria-label={`Remove ${item.product.name} from cart`} onClick={() => removeFromCart(item.product.id)}>
+                    <button type="button" aria-label={`Remove ${item.product.name} from cart`} onClick={() => removeFromCart(item.cartKey || item.product.id)}>
                       <Trash2 size={15} />
                     </button>
                   </div>

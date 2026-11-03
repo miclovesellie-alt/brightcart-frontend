@@ -235,6 +235,7 @@ function ProductCard({ product, onClick }) {
   const { format } = useCurrency();
   const [added, setAdded] = useState(false);
   const [nameExpanded, setNameExpanded] = useState(false);
+  const hasColorOptions = Array.isArray(product.variants) && product.variants.some(variant => variant?.color || variant?.name);
 
   const handleNameClick = (event) => {
     const isSmallScreen = window.matchMedia('(max-width: 767px)').matches;
@@ -255,6 +256,7 @@ function ProductCard({ product, onClick }) {
 
   const handleAdd = (e) => {
     e.stopPropagation();
+    if (hasColorOptions) { onClick?.(); return; }
     addToCart(product, 1);
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
@@ -324,7 +326,7 @@ function ProductCard({ product, onClick }) {
         onMouseLeave={(e) => { if (!added) { e.currentTarget.style.background='#4f8ef7'; e.currentTarget.style.boxShadow='none'; }}}
       >
         <ShoppingCart size={14} />
-        {added ? '✓ Added!' : 'Add to Cart'}
+        {hasColorOptions ? 'Choose a Color' : added ? '✓ Added!' : 'Add to Cart'}
       </button>
     </div>
   );

@@ -20,9 +20,9 @@ const NAV = [
 ];
 
 const EMPTY_CANDIDATE = {
-  productName: '', category: 'phone-accessories', sourceUrl: '', supplierName: '', supplierUrl: '',
-  imageUrl: '', unitCost: '', shippingCost: '0', retailPrice: '', availableStock: '',
-  shippingDays: '', verifiedFacts: '', variants: '',
+  productName: '', category: '', sourceUrl: '', supplierName: '', supplierUrl: '',
+  imageUrl: '', images: '', unitCost: '', shippingCost: '', shippingStatus: 'unknown', retailPrice: '', availableStock: '',
+  shippingDays: '', shippingDestination: '', shippingCurrency: '', supplierCurrency: '', verifiedFacts: '', variants: '',
 };
 
 const cardStyle = { background: '#fff', border: '1px solid #e8edf3', borderRadius: 14 };
@@ -86,7 +86,7 @@ function StatusPill({ children, tone = 'slate' }) {
 }
 
 export default function AIDropshipping() {
-  const { currency, rates, format } = useCurrency();
+  const { currency, rates, format, convertBetween } = useCurrency();
   const { adminProducts, orders, user, refreshAdminProducts, refreshAdminOrders, updateProduct } = useStore();
   const [section, setSection] = useState('overview');
   const [days, setDays] = useState(30);
@@ -99,6 +99,10 @@ export default function AIDropshipping() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [candidateForm, setCandidateForm] = useState(EMPTY_CANDIDATE);
+  const [extractUrl, setExtractUrl] = useState('');
+  const [destinationCountry, setDestinationCountry] = useState(user?.country || '');
+  const [extracting, setExtracting] = useState(false);
+  const [extractionSummary, setExtractionSummary] = useState(null);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [duplicate, setDuplicate] = useState(null);
   const [editingDraft, setEditingDraft] = useState(null);
@@ -129,6 +133,7 @@ export default function AIDropshipping() {
   }, [days]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { if (!destinationCountry && user?.country) setDestinationCountry(user.country); }, [destinationCountry, user?.country]);
 
   const metrics = overview?.metrics || {};
   const previous = overview?.previous || {};
@@ -141,6 +146,11 @@ export default function AIDropshipping() {
     return `${percentage > 0 ? '+' : ''}${percentage.toFixed(1)}% vs previous ${days} days`;
   };
   const toUsd = amount => Number(amount || 0) / (rates[currency] || 1);
+  const fromSupplierCurrency = (amount, sourceCode) => {
+    if (amount == null || !sourceCode || !rates[sourceCode] || !rates[currency]) return '';
+    const converted = convertBetween(Number(amount), sourceCode, currency);
+    return Number.isFinite(converted) ? String(Math.round(converted * 100) / 100) : '';
+  };
   const pricingResult = useMemo(() => {
     const cost = Number(pricing.unitCost);
     const shipping = Number(pricing.shippingCost);
@@ -167,8 +177,81 @@ export default function AIDropshipping() {
     return { recommended, breakEven, grossProfit, grossMargin, fees, baseCost };
   }, [pricing]);
 
-  const onCandidateField = event => setCandidateForm(prev => ({ ...prev, [event.target.name]: event.target.value }));
+  const onCandidateField = event => {
+    const { name, value } = event.target;
+    setCandidateForm(prev => ({
+      ...prev,
+      [name]: value,
+      ...(['unitCost', 'shippingCost', 'shippingStatus'].includes(name) ? { retailPrice: '' } : {}),
+      ...(name === 'shippingStatus' && value === 'free' ? { shippingCost: '0' } : {}),
+      ...(name === 'shippingStatus' && value === 'unknown' ? { shippingCost: '' } : {}),
+    }));
+  };
   const onPricingField = event => setPricing(prev => ({ ...prev, [event.target.name]: event.target.value }));
+
+  async function extractSupplierProduct() {
+    if (!extractUrl.trim()) {
+      setResearchMessage('Enter a supplier product URL first.');
+      return;
+    }
+    setExtracting(true);
+    setResearchMessage('');
+    setError('');
+    setExtractionSummary(null);
+    try {
+      const result = await api.extractDropshipProduct({ url: extractUrl.trim(), destinationCountry: destinationCountry.trim() });
+      const data = result.data || {};
+      const supplierCurrency = data.currency || '';
+      const shippingCurrency = data.shippingCurrency || supplierCurrency;
+      const priceInCurrent = fromSupplierCurrency(data.unitCost, supplierCurrency);
+      const shippingInCurrent = fromSupplierCurrency(data.shippingCost, shippingCurrency);
+      const retailInCurrent = fromSupplierCurrency(data.suggestedRetailPrice, supplierCurrency);
+      const images = Array.isArray(data.images) ? data.images : [];
+      const variants = Array.isArray(data.variants) ? data.variants.map(item => `${item.color || item.name}${item.image ? ` | ${item.image}` : ''}`).join('\n') : '';
+      setCandidateForm(prev => ({
+        ...prev,
+        productName: data.productName || prev.productName,
+        category: data.category || prev.category,
+        sourceUrl: result.source || data.sourceUrl || extractUrl.trim(),
+        supplierName: data.supplierName || prev.supplierName,
+        supplierUrl: data.supplierUrl || result.source || extractUrl.trim(),
+        imageUrl: data.imageUrl || images[0] || '',
+        images: images.join('\n'),
+        unitCost: priceInCurrent,
+        shippingStatus: data.shippingStatus || 'unknown',
+        shippingCost: data.shippingStatus === 'free' ? '0' : shippingInCurrent,
+        shippingDestination: data.shippingDestination || destinationCountry.trim(),
+        shippingCurrency,
+        supplierCurrency,
+        retailPrice: retailInCurrent,
+        availableStock: data.availableStock == null ? '' : String(data.availableStock),
+        shippingDays: data.shippingDays == null ? '' : String(data.shippingDays),
+        verifiedFacts: (data.verifiedFacts || []).join('\n'),
+        variants,
+      }));
+      setPricing(prev => ({
+        ...prev,
+        unitCost: priceInCurrent,
+        shippingCost: data.shippingStatus === 'free' ? '0' : shippingInCurrent,
+      }));
+      setExtractionSummary({
+        currency: supplierCurrency,
+        unitCost: data.unitCost,
+        suggestedRetailPrice: data.suggestedRetailPrice,
+        missingSignals: data.missingSignals || [],
+        pricingPolicy: data.pricingPolicy,
+        source: result.source,
+      });
+      const missing = data.missingSignals?.length ? ` Needs review: ${data.missingSignals.join(', ')}.` : '';
+      const conversionWarning = data.unitCost != null && !priceInCurrent ? ` The source price is ${data.unitCost} ${supplierCurrency || '(currency not stated)'}; enter a verified price in ${currency} manually.` : '';
+      const shippingWarning = data.shippingCost != null && !shippingInCurrent ? ` The supplier shipping fee is ${data.shippingCost} ${shippingCurrency || '(currency not stated)'}; enter it in ${currency} manually.` : '';
+      setResearchMessage(`Product facts extracted from the source. Check the title, images, variants, and all amounts before saving.${missing}${conversionWarning}${shippingWarning}`);
+    } catch (err) {
+      setResearchMessage(err.message || 'Could not extract this supplier page. You can still enter verified facts manually.');
+    } finally {
+      setExtracting(false);
+    }
+  }
 
   async function submitCandidate(event) {
     event.preventDefault();
@@ -176,28 +259,50 @@ export default function AIDropshipping() {
     setError('');
     setNotice('');
     try {
-      const variants = candidateForm.variants.split('\n').map(value => value.trim()).filter(Boolean).map(name => ({ name }));
+      const images = [...new Set(candidateForm.images.split('\n').map(value => value.trim()).filter(Boolean))];
+      const variants = candidateForm.variants.split('\n').map(value => value.trim()).filter(Boolean).map(line => {
+        const [colorValue, imageValue] = line.split('|').map(value => value.trim());
+        const color = colorValue || line;
+        return { name: color, color, image: imageValue || '', images: imageValue ? [imageValue] : [] };
+      });
       const result = await api.createResearch({
         productName: candidateForm.productName,
         category: candidateForm.category,
         sourceUrl: candidateForm.sourceUrl,
         supplierName: candidateForm.supplierName,
         supplierUrl: candidateForm.supplierUrl,
-        imageUrl: candidateForm.imageUrl,
-        unitCost: toUsd(candidateForm.unitCost),
-        shippingCost: toUsd(candidateForm.shippingCost),
-        retailPrice: toUsd(candidateForm.retailPrice),
-        availableStock: Number(candidateForm.availableStock),
+        imageUrl: candidateForm.imageUrl || images[0] || '',
+        images,
+        unitCost: candidateForm.unitCost === '' ? null : toUsd(candidateForm.unitCost),
+        shippingStatus: candidateForm.shippingStatus,
+        shippingCost: candidateForm.shippingStatus === 'free' ? 0 : candidateForm.shippingStatus === 'paid' && candidateForm.shippingCost !== '' ? toUsd(candidateForm.shippingCost) : null,
+        shippingDestination: candidateForm.shippingDestination || destinationCountry,
+        shippingCurrency: 'USD',
+        retailPrice: candidateForm.retailPrice === '' ? null : toUsd(candidateForm.retailPrice),
+        availableStock: candidateForm.availableStock === '' ? null : Number(candidateForm.availableStock),
         shippingDays: candidateForm.shippingDays === '' ? null : Number(candidateForm.shippingDays),
+        supplierCurrency: candidateForm.supplierCurrency || currency,
         currency: 'USD',
         verifiedFacts: candidateForm.verifiedFacts.split('\n').map(value => value.trim()).filter(Boolean),
         variants,
       });
-      setResearch(prev => [result.data, ...prev]);
+      let savedCandidate = result.data;
+      let copyMessage = '';
+      if (connections?.ai?.available) {
+        try {
+          const generated = await api.generateProductContent(savedCandidate._id);
+          savedCandidate = generated.data;
+          copyMessage = ` Draft copy was generated with ${generated.provider || 'the configured AI provider'}.`;
+        } catch (copyError) {
+          copyMessage = ` AI copy was not generated: ${copyError.message}`;
+        }
+      }
+      setResearch(prev => [savedCandidate, ...prev]);
       setCandidateForm(EMPTY_CANDIDATE);
-      setNotice('Research record saved. Supplier facts are admin-entered and demand/competition signals remain unavailable.');
+      setExtractionSummary(null);
+      setNotice(`Research record saved for review.${copyMessage}`);
       setResearchMessage('');
-      setSelectedCandidate(result.data);
+      setSelectedCandidate(savedCandidate);
       await loadOverviewOnly();
     } catch (err) {
       setError(err.message || 'Could not save this research record.');
@@ -218,9 +323,9 @@ export default function AIDropshipping() {
       const result = await api.generateProductContent(candidate._id);
       setResearch(prev => prev.map(item => String(item._id) === String(candidate._id) ? result.data : item));
       setSelectedCandidate(result.data);
-      setNotice('Local model generated draft copy. Review every statement against the supplier source before importing.');
+      setNotice(`Draft copy generated with ${result.provider || 'the configured AI provider'}. Review every statement against the supplier source before importing.`);
     } catch (err) {
-      setResearchMessage(err.message || 'Local model is unavailable.');
+      setResearchMessage(err.message || 'Configured AI providers are unavailable.');
     } finally {
       setSaving(false);
     }
@@ -244,12 +349,54 @@ export default function AIDropshipping() {
     }
   }
 
+  function recalculateDraftPrice() {
+    const details = editingDraft?.supplierDetails || {};
+    const unitCost = Number(details.unitCost);
+    const shippingStatus = details.shippingStatus || 'unknown';
+    const shippingCost = shippingStatus === 'free' ? 0 : Number(details.shippingCost);
+    if (!Number.isFinite(unitCost) || unitCost <= 0 || shippingStatus === 'unknown' || (shippingStatus === 'paid' && (!Number.isFinite(shippingCost) || shippingCost < 0))) {
+      setError('Enter a supplier cost and confirm shipping before calculating the retail price.');
+      return;
+    }
+    const policy = connections?.pricing || {};
+    const fees = (Number(policy.paymentFeePercent || 0) + Number(policy.platformFeePercent || 0)) / 100;
+    const margin = Number(policy.targetMarginPercent || 35) / 100;
+    const rounding = Number(policy.roundingIncrement || 1);
+    const denominator = 1 - fees - margin;
+    if (denominator <= 0 || !Number.isFinite(rounding) || rounding <= 0) {
+      setError('The configured price policy cannot produce a positive retail price.');
+      return;
+    }
+    const totalCost = unitCost + (shippingStatus === 'free' ? 0 : shippingCost);
+    const recommended = Math.ceil((totalCost / denominator) / rounding) * rounding;
+    setEditingDraft(prev => ({ ...prev, price: String(recommended) }));
+    setError('');
+    if (policy.feesConfigured === false) setNotice('Price recalculated with 0% payment/platform fees. Configure actual fees before publishing.');
+  }
+
+  function draftPayload() {
+    const supplierDetails = editingDraft?.supplierDetails || {};
+    return {
+      ...editingDraft,
+      price: toUsd(editingDraft.price),
+      stock: Number(editingDraft.stock),
+      supplierDetails: {
+        ...supplierDetails,
+        unitCost: supplierDetails.unitCost === '' || supplierDetails.unitCost == null ? null : toUsd(supplierDetails.unitCost),
+        shippingCost: supplierDetails.shippingStatus === 'free' ? 0
+          : supplierDetails.shippingStatus === 'paid' && supplierDetails.shippingCost !== '' && supplierDetails.shippingCost != null
+            ? toUsd(supplierDetails.shippingCost)
+            : null,
+      },
+    };
+  }
+
   async function saveDraft() {
     if (!editingDraft) return;
     setSaving(true);
     setError('');
     try {
-      await updateProduct({ ...editingDraft, price: toUsd(editingDraft.price), stock: Number(editingDraft.stock) });
+      await updateProduct(draftPayload());
       setNotice('Draft saved in the shared product catalog.');
       setEditingDraft(null);
       setDraftChecks({ policyReviewed: false, inventoryVerified: false, contentReviewed: false });
@@ -265,7 +412,7 @@ export default function AIDropshipping() {
     setSaving(true);
     setError('');
     try {
-      await updateProduct({ ...editingDraft, price: toUsd(editingDraft.price), stock: Number(editingDraft.stock) });
+      await updateProduct(draftPayload());
       const result = await api.publishDraft(editingDraft.id, draftChecks);
       setNotice(`${result.data.name} is live in the storefront catalog.`);
       setEditingDraft(null);
@@ -390,26 +537,37 @@ export default function AIDropshipping() {
 
           {section === 'research' && (
             <section className="ds-stack">
-              <div className="ds-section-head"><div><h2>Product research</h2><p>Add facts from a supplier or permitted source. Scores describe only the supplied operational inputs.</p></div></div>
-              <div className="ds-callout"><AlertTriangle size={17} /><div><strong>Source and uncertainty</strong><span>This repository has no supplier catalog or trend feed. Add a source you are authorized to use. Demand, competition, reliability, seasonality, and policy signals are not inferred.</span></div></div>
+              <div className="ds-section-head"><div><h2>Product research</h2><p>Import a supplier product page, verify its facts and pricing, then save it for admin review.</p></div></div>
+              <div className="ds-callout"><AlertTriangle size={17} /><div><strong>Source and uncertainty</strong><span>The importer reads public product metadata from the URL you provide. Shipping is only confirmed when the supplier states a rate for your chosen destination. Missing facts stay blank for review.</span></div></div>
+              <section className="ds-panel ds-form-panel" style={cardStyle}>
+                <div className="ds-panel-head"><div><h3>Import from supplier URL</h3><p>Enter a product page to extract its listed facts, images, vendor price, and structured color options.</p></div><StatusPill tone="blue">Source review required</StatusPill></div>
+                <div className="ds-form-grid">
+                  <Field label="SUPPLIER PRODUCT URL *" value={extractUrl} onChange={event => setExtractUrl(event.target.value)} type="url" placeholder="https://supplier.com/product/…" />
+                  <Field label="SHIPPING DESTINATION (COUNTRY OR ISO CODE)" value={destinationCountry} onChange={event => setDestinationCountry(event.target.value)} placeholder="e.g. GH" help="The importer only accepts a shipping rate explicitly marked for this destination." />
+                </div>
+                <div className="ds-form-foot"><span>Extraction reads public HTML and product metadata only. Pages that require sign-in or JavaScript may need manual entry.</span><button type="button" style={buttonStyle} disabled={extracting || saving} onClick={extractSupplierProduct}><Search size={15} /> {extracting ? "Reading supplier page…" : "Extract product details"}</button></div>
+                {extractionSummary && <div className="ds-ai-note"><Sparkles size={13} />{extractionSummary.unitCost != null ? `Source price: ${extractionSummary.unitCost} ${extractionSummary.currency || "(currency not stated)"}. ` : ""}{extractionSummary.suggestedRetailPrice != null ? `Suggested retail: ${extractionSummary.suggestedRetailPrice} ${extractionSummary.currency} using the server price policy.` : "Retail suggestion waits for a confirmed vendor price and destination shipping rate."}{extractionSummary.pricingPolicy?.feesConfigured === false ? " Payment/platform fees default to 0 in the suggestion; configure them before publishing." : ""}</div>}
+              </section>
               <form className="ds-panel ds-form-panel" style={cardStyle} onSubmit={submitCandidate}>
-                <div className="ds-panel-head"><div><h3>Record a sourced opportunity</h3><p>Amounts are converted to the product catalog’s USD base currency on save.</p></div><StatusPill tone="blue">Admin review required</StatusPill></div>
+                <div className="ds-panel-head"><div><h3>Review extracted facts</h3><p>Confirm missing values before saving. Amounts are stored in the catalog’s USD base currency.</p></div><StatusPill tone="blue">Draft only</StatusPill></div>
                 <div className="ds-form-grid">
                   <Field label="PRODUCT NAME *" name="productName" value={candidateForm.productName} onChange={onCandidateField} required />
-                  <label className="ds-field"><span style={labelStyle}>CATEGORY *</span><select name="category" value={candidateForm.category} onChange={onCandidateField} style={inputStyle}><option value="phones">Phones</option><option value="phone-accessories">Phone accessories</option><option value="laptop-accessories">Laptop accessories</option><option value="electrical">Electrical</option></select></label>
+                  <label className="ds-field"><span style={labelStyle}>CATEGORY *</span><select name="category" value={candidateForm.category} onChange={onCandidateField} style={inputStyle}><option value="">Select category</option><option value="phones">Phones</option><option value="phone-accessories">Phone accessories</option><option value="laptop-accessories">Laptop accessories</option><option value="electrical">Electrical</option></select></label>
                   <Field label="SUPPLIER NAME *" name="supplierName" value={candidateForm.supplierName} onChange={onCandidateField} required />
                   <Field label="SOURCE URL *" name="sourceUrl" value={candidateForm.sourceUrl} onChange={onCandidateField} type="url" placeholder="https://…" required />
                   <Field label="SUPPLIER PRODUCT URL" name="supplierUrl" value={candidateForm.supplierUrl} onChange={onCandidateField} type="url" placeholder="https://…" />
                   <Field label="IMAGE URL" name="imageUrl" value={candidateForm.imageUrl} onChange={onCandidateField} type="url" placeholder="https://…" />
-                  <Field label={`SUPPLIER UNIT COST (${currency}) *`} name="unitCost" value={candidateForm.unitCost} onChange={onCandidateField} type="number" min="0" step="0.01" required />
-                  <Field label={`SHIPPING COST (${currency})`} name="shippingCost" value={candidateForm.shippingCost} onChange={onCandidateField} type="number" min="0" step="0.01" />
-                  <Field label={`PROPOSED RETAIL PRICE (${currency}) *`} name="retailPrice" value={candidateForm.retailPrice} onChange={onCandidateField} type="number" min="0.01" step="0.01" required />
-                  <Field label="AVAILABLE STOCK *" name="availableStock" value={candidateForm.availableStock} onChange={onCandidateField} type="number" min="0" step="1" required />
+                  <Field label={`SUPPLIER UNIT COST (${currency})`} name="unitCost" value={candidateForm.unitCost} onChange={onCandidateField} type="number" min="0" step="0.01" placeholder="Unknown" />
+                  <label className="ds-field"><span style={labelStyle}>SUPPLIER SHIPPING STATUS *</span><select name="shippingStatus" value={candidateForm.shippingStatus} onChange={onCandidateField} style={inputStyle}><option value="unknown">Unknown / not shown</option><option value="free">Free shipping confirmed</option><option value="paid">Paid shipping confirmed</option></select></label>
+                  <Field label={`SHIPPING COST (${currency})`} name="shippingCost" value={candidateForm.shippingCost} onChange={onCandidateField} type="number" min="0" step="0.01" placeholder={candidateForm.shippingStatus === 'unknown' ? 'Unknown' : candidateForm.shippingStatus === 'free' ? '0' : 'Required when paid'} required={candidateForm.shippingStatus === 'paid'} />
+                  <Field label={`SUGGESTED / YOUR RETAIL PRICE (${currency})`} name="retailPrice" value={candidateForm.retailPrice} onChange={onCandidateField} type="number" min="0.01" step="0.01" placeholder="Calculated when supplier costs are confirmed" />
+                  <Field label="AVAILABLE STOCK" name="availableStock" value={candidateForm.availableStock} onChange={onCandidateField} type="number" min="0" step="1" placeholder="Unknown" />
                   <Field label="SHIPPING TIME (DAYS)" name="shippingDays" value={candidateForm.shippingDays} onChange={onCandidateField} type="number" min="0" step="1" placeholder="Unknown" />
-                  <Field label="VARIANTS (ONE PER LINE)" name="variants" value={candidateForm.variants} onChange={onCandidateField} placeholder="Black / 64 GB" />
+                  <Field label="COLOR VARIANTS (COLOR | IMAGE URL)" name="variants" value={candidateForm.variants} onChange={onCandidateField} placeholder="Black | https://… (one per line)" />
+                  <label className="ds-field ds-span-2"><span style={labelStyle}>PRODUCT IMAGES (ONE URL PER LINE)</span><textarea name="images" value={candidateForm.images} onChange={onCandidateField} rows="3" style={{ ...inputStyle, resize: 'vertical' }} placeholder="https://supplier.com/image.jpg" /></label>
                   <label className="ds-field ds-span-2"><span style={labelStyle}>VERIFIED PRODUCT FACTS (ONE PER LINE)</span><textarea name="verifiedFacts" value={candidateForm.verifiedFacts} onChange={onCandidateField} rows="4" style={{ ...inputStyle, resize: 'vertical' }} placeholder="Only enter details confirmed by the source." /></label>
                 </div>
-                <div className="ds-form-foot"><span>Research date: {new Date().toLocaleDateString()}</span><button style={buttonStyle} disabled={saving}><Plus size={15} /> Save research</button></div>
+                <div className="ds-form-foot"><span>Retail suggestions use the configured margin and fee policy; unknown shipping stays blank.</span><button style={buttonStyle} disabled={saving}><Plus size={15} /> Save for draft review</button></div>
               </form>
               {researchMessage && <div className="ds-alert ds-alert-warning" role="status"><AlertTriangle size={16} />{researchMessage}</div>}
               <section className="ds-panel" style={cardStyle}>
@@ -417,11 +575,11 @@ export default function AIDropshipping() {
                 {!research.length ? <div className="ds-empty">No sourced research yet. Add a candidate above to start a review record.</div> : (
                   <div className="ds-research-list">{research.map(candidate => (
                     <article className="ds-research-card" key={candidate._id}>
-                      <ProductImageGallery className="ds-research-art" product={{ image: candidate.imageUrl }} alt={candidate.productName} showControls={false} />
+                      <ProductImageGallery className="ds-research-art" product={{ image: candidate.imageUrl, images: candidate.images }} alt={candidate.productName} showControls={false} />
                       <div className="ds-research-main">
                         <div className="ds-research-title"><div><h4>{candidate.productName}</h4><small>{candidate.supplierName} · {candidate.category}</small></div><StatusPill tone={candidate.state === 'imported' ? 'green' : 'blue'}>{candidate.state || 'researched'}</StatusPill></div>
                         <p className="ds-research-facts">{candidate.verifiedFacts?.slice(0, 2).join(' · ') || 'No verified product facts supplied.'}</p>
-                        <div className="ds-research-data"><span>Cost <b>{format(Number(candidate.unitCost || 0) + Number(candidate.shippingCost || 0))}</b></span><span>Retail <b>{format(candidate.retailPrice || 0)}</b></span><span>Stock <b>{candidate.availableStock ?? '—'}</b></span><span>Ship <b>{candidate.shippingDays != null ? `${candidate.shippingDays} days` : 'Unknown'}</b></span></div>
+                        <div className="ds-research-data"><span>Unit cost <b>{candidate.unitCost == null ? 'Unknown' : format(candidate.unitCost)}</b></span><span>Retail <b>{candidate.retailPrice == null ? 'Pending' : format(candidate.retailPrice)}</b></span><span>Stock <b>{candidate.availableStock ?? 'Unknown'}</b></span><span>Ship <b>{candidate.shippingStatus === 'free' ? 'Free' : candidate.shippingStatus === 'paid' ? format(candidate.shippingCost || 0) : 'Unknown'}</b></span></div>
                         <div className="ds-score-row"><div className="ds-score-track"><i style={{ width: `${candidate.score || 0}%` }} /></div><strong>{candidate.score || 0}<small>/100 operational fit</small></strong><a href={candidate.sourceUrl} target="_blank" rel="noreferrer">Source <ExternalLink size={12} /></a></div>
                         <div className="ds-research-actions">
                           <button style={secondaryStyle} onClick={() => setSelectedCandidate(candidate)}><Eye size={14} /> Preview</button>
@@ -454,7 +612,7 @@ export default function AIDropshipping() {
                     <Field label={`ROUND PRICE UP TO (${currency})`} name="rounding" type="number" min="0.01" step="0.01" value={pricing.rounding} onChange={onPricingField} />
                     <Field label={`MINIMUM PROFIT PER UNIT (${currency})`} name="minimumProfit" type="number" min="0" step="0.01" value={pricing.minimumProfit} onChange={onPricingField} />
                   </div>
-                  <p className="ds-form-hint">Assumption: input costs share one currency. Tax, refunds, shipping subsidies, and other expenses are excluded unless added as costs.</p>
+                  <p className="ds-form-hint">Assumption: input costs share one currency. Tax, refunds, shipping subsidies, and other expenses are excluded unless added as costs. Set the real processor and platform fees in the backend pricing policy before publishing.</p>
                 </section>
                 <section className="ds-panel ds-price-result" style={cardStyle}>
                   <div className="ds-panel-head"><div><h3>Price recommendation</h3><p>{pricing.mode === 'margin' ? 'Target is contribution after listed costs as a share of retail price.' : 'Target is markup over the listed costs.'}</p></div></div>
@@ -475,7 +633,7 @@ export default function AIDropshipping() {
               <div className="ds-section-head"><div><h2>Product studio</h2><p>Drafts share the same product catalog as Admin &gt; Products. Only reviewed, in-stock drafts can be published.</p></div><StatusPill tone="amber">Review required</StatusPill></div>
               {!draftProducts.length ? <div className="ds-panel ds-empty" style={cardStyle}>No AI dropshipping drafts yet. Save a research candidate and import it here.</div> : (
                 <div className="ds-studio-grid">{draftProducts.map(product => (
-                  <button className="ds-studio-card" style={cardStyle} key={product.id} onClick={() => { setEditingDraft({ ...product, price: String(Number(product.price || 0) * (rates[currency] || 1)) }); setDraftChecks({ policyReviewed: false, inventoryVerified: false, contentReviewed: false }); }}>
+                  <button className="ds-studio-card" style={cardStyle} key={product.id} onClick={() => { setEditingDraft({ ...product, price: String(Number(product.price || 0) * (rates[currency] || 1)), supplierDetails: { ...(product.supplierDetails || {}), unitCost: product.supplierDetails?.unitCost == null ? '' : String(Number(product.supplierDetails.unitCost) * (rates[currency] || 1)), shippingCost: product.supplierDetails?.shippingCost == null ? '' : String(Number(product.supplierDetails.shippingCost) * (rates[currency] || 1)) } }); setDraftChecks({ policyReviewed: false, inventoryVerified: false, contentReviewed: false }); }}>
                     <ProductImageGallery className="ds-studio-image" product={product} alt={product.name} showControls={false} />
                     <div className="ds-studio-body"><div className="ds-studio-row"><StatusPill tone="amber">Draft</StatusPill><span>{product.category}</span></div><h3>{product.name}</h3><p>{product.description || 'Description required before publishing.'}</p><div className="ds-studio-foot"><b>{format(product.price || 0)}</b><span>{product.stock ?? 0} units</span><span>Review draft <ChevronRight size={13} /></span></div></div>
                   </button>
@@ -489,9 +647,14 @@ export default function AIDropshipping() {
                       <Field label="TITLE" value={editingDraft.name || ''} onChange={event => setEditingDraft(prev => ({ ...prev, name: event.target.value }))} />
                       <Field label={`RETAIL PRICE (${currency})`} type="number" min="0.01" step="0.01" value={editingDraft.price || ''} onChange={event => setEditingDraft(prev => ({ ...prev, price: event.target.value }))} />
                       <Field label="STOCK" type="number" min="0" step="1" value={editingDraft.stock ?? ''} onChange={event => setEditingDraft(prev => ({ ...prev, stock: event.target.value }))} />
+                      <label className="ds-field"><span style={labelStyle}>SUPPLIER SHIPPING STATUS *</span><select value={editingDraft.supplierDetails?.shippingStatus || 'unknown'} onChange={event => setEditingDraft(prev => ({ ...prev, price: '', supplierDetails: { ...(prev.supplierDetails || {}), shippingStatus: event.target.value, shippingCost: event.target.value === 'free' ? '0' : event.target.value === 'unknown' ? '' : prev.supplierDetails?.shippingCost || '' } }))} style={inputStyle}><option value="unknown">Unknown / not verified</option><option value="free">Free shipping confirmed</option><option value="paid">Paid shipping confirmed</option></select></label>
+                      <Field label={'SUPPLIER UNIT COST (' + currency + ')'} type="number" min="0" step="0.01" value={editingDraft.supplierDetails?.unitCost ?? ''} onChange={event => setEditingDraft(prev => ({ ...prev, price: '', supplierDetails: { ...(prev.supplierDetails || {}), unitCost: event.target.value } }))} placeholder="Unknown" />
+                      <Field label={'SUPPLIER SHIPPING COST (' + currency + ')'} type="number" min="0" step="0.01" value={editingDraft.supplierDetails?.shippingCost ?? ''} onChange={event => setEditingDraft(prev => ({ ...prev, price: '', supplierDetails: { ...(prev.supplierDetails || {}), shippingCost: event.target.value } }))} placeholder={editingDraft.supplierDetails?.shippingStatus === 'unknown' ? 'Unknown' : editingDraft.supplierDetails?.shippingStatus === 'free' ? '0' : 'Required when paid'} required={editingDraft.supplierDetails?.shippingStatus === 'paid'} disabled={editingDraft.supplierDetails?.shippingStatus !== 'paid'} />
+                      <Field label="SHIPPING DESTINATION" value={editingDraft.supplierDetails?.shippingDestination || ''} onChange={event => setEditingDraft(prev => ({ ...prev, supplierDetails: { ...(prev.supplierDetails || {}), shippingDestination: event.target.value } }))} placeholder="Country or ISO code" />
                       <Field label="IMAGE URL" value={editingDraft.image || ''} onChange={event => setEditingDraft(prev => ({ ...prev, image: event.target.value }))} />
                       <label className="ds-field ds-span-2"><span style={labelStyle}>DESCRIPTION</span><textarea rows="5" style={{ ...inputStyle, resize: 'vertical' }} value={editingDraft.description || ''} onChange={event => setEditingDraft(prev => ({ ...prev, description: event.target.value }))} /></label>
                     </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '12px 0 4px' }}><button type="button" style={secondaryStyle} onClick={recalculateDraftPrice}>Recalculate retail price from confirmed costs</button></div>
                     <div className="ds-review-checks">
                       <label><input type="checkbox" checked={draftChecks.inventoryVerified} onChange={event => setDraftChecks(prev => ({ ...prev, inventoryVerified: event.target.checked }))} /> I confirmed stock against the supplier source.</label>
                       <label><input type="checkbox" checked={draftChecks.policyReviewed} onChange={event => setDraftChecks(prev => ({ ...prev, policyReviewed: event.target.checked }))} /> I reviewed product claims and policy risks.</label>
@@ -541,9 +704,9 @@ export default function AIDropshipping() {
               <div className="ds-section-head"><div><h2>Connections &amp; safeguards</h2><p>Secrets stay on the server. This page reports setup state without asking for private keys.</p></div></div>
               <div className="ds-connection-grid">
                 <article className="ds-connection-card" style={cardStyle}>
-                  <div className="ds-connection-icon ds-icon-purple"><Sparkles size={19} /></div><div className="ds-connection-title"><div><h3>Free local AI</h3><p>{connections?.ai?.provider || 'Ollama (local)'}</p></div><StatusPill tone={connections?.ai?.available ? 'green' : 'amber'}>{connections?.ai?.available ? 'Ready' : 'Waiting'}</StatusPill></div>
-                  <p className="ds-connection-copy">{connections?.ai?.model ? `Model: ${connections.ai.model}.` : 'No local model is configured.'} AI requests are sent only to the server-configured loopback Ollama endpoint. No paid fallback is used.</p>
-                  <div className="ds-setup-box"><strong>Server setup</strong><code>Install Ollama, download a local model, then set OLLAMA_MODEL on the backend.</code><span>{connections?.ai?.setup || 'AI output must be checked against verified facts.'}</span></div>
+                  <div className="ds-connection-icon ds-icon-purple"><Sparkles size={19} /></div><div className="ds-connection-title"><div><h3>AI provider fallback</h3><p>{connections?.ai?.provider || 'Gemini → Groq → Ollama'}</p></div><StatusPill tone={connections?.ai?.available ? 'green' : 'amber'}>{connections?.ai?.available ? 'Configured' : 'Not configured'}</StatusPill></div>
+                  <p className="ds-connection-copy">Configured providers are tried in order. Quota, network, or model errors trigger the next configured provider. Use free-tier accounts if you want to avoid provider charges; credentials remain on the server.</p>
+                  <div className="ds-setup-box"><strong>Optional backend setup</strong><code>GEMINI_API_KEY · GROQ_API_KEY · OLLAMA_MODEL</code><span>{connections?.ai?.setup || 'AI output must be checked against verified facts.'}</span></div>
                 </article>
                 <article className="ds-connection-card" style={cardStyle}>
                   <div className="ds-connection-icon ds-icon-blue"><Truck size={19} /></div><div className="ds-connection-title"><div><h3>Supplier API</h3><p>Official adapters only</p></div><StatusPill tone="amber">Not connected</StatusPill></div>
@@ -576,7 +739,7 @@ export default function AIDropshipping() {
             </div>
             {selectedCandidate.content?.bullets?.length > 0 && <ul className="ds-preview-list">{selectedCandidate.content.bullets.map((bullet, index) => <li key={index}>{bullet}</li>)}</ul>}
             <div className="ds-preview-source"><ExternalLink size={13} /><a href={selectedCandidate.sourceUrl} target="_blank" rel="noreferrer">Review source facts</a><span>·</span><span>{selectedCandidate.availableStock || 0} supplied stock</span></div>
-            <div className="ds-modal-actions"><button style={secondaryStyle} onClick={() => generateContent(selectedCandidate)} disabled={saving || !connections?.ai?.available}><Sparkles size={14} /> Generate with local AI</button><button style={buttonStyle} onClick={() => importCandidate(selectedCandidate)} disabled={saving}><Package size={14} /> Import hidden draft</button></div>
+            <div className="ds-modal-actions"><button style={secondaryStyle} onClick={() => generateContent(selectedCandidate)} disabled={saving || !connections?.ai?.available}><Sparkles size={14} /> Generate copy with configured AI</button><button style={buttonStyle} onClick={() => importCandidate(selectedCandidate)} disabled={saving}><Package size={14} /> Import hidden draft</button></div>
           </section>
         </div>
       )}

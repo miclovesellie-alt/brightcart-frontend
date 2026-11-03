@@ -15,9 +15,23 @@ export default function ProductDetailPage() {
   const { products, pageParams, navigate, addToCart } = useStore();
   const { format } = useCurrency();
   const product = products.find(p => p.id === pageParams.productId) || products[0];
+  const colorVariants = Array.isArray(product?.variants)
+    ? product.variants.filter(variant => variant && (variant.color || variant.name))
+    : [];
+  const [selectedColorKey, setSelectedColorKey] = useState('');
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const [wishlisted, setWishlisted] = useState(false);
+  const variantKey = variant => String(variant?.id || variant?.color || variant?.name || '').trim().toLowerCase();
+  const selectedVariant = colorVariants.find(variant => variantKey(variant) === selectedColorKey) || colorVariants[0] || null;
+  const currentStock = Number(selectedVariant?.stock ?? product?.stock ?? 0);
+  const galleryProduct = selectedVariant ? {
+    ...product,
+    image: selectedVariant.image || selectedVariant.imageUrl || product.image,
+    images: Array.isArray(selectedVariant.images) && selectedVariant.images.length
+      ? selectedVariant.images
+      : [selectedVariant.image || selectedVariant.imageUrl, ...(product.images || [])].filter(Boolean),
+  } : product;
 
   const related = product ? products
     .filter(p => p.category === product.category && p.id !== product.id)
@@ -31,7 +45,7 @@ export default function ProductDetailPage() {
     : null;
 
   const handleAddToCart = () => {
-    addToCart(product, qty);
+    addToCart(product, qty, selectedVariant);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
@@ -90,7 +104,7 @@ export default function ProductDetailPage() {
               minHeight: '360px',
               overflow: 'hidden',
             }}>
-              <ProductImageGallery product={product} alt={product.name} className="product-detail-page__gallery" scrollable={false} swipeable style={{ width: '100%', height: 300, flex: '0 0 auto', borderRadius: 10, overflow: 'hidden' }} imageStyle={{ padding: 0, maxWidth: '86%', maxHeight: '86%' }} />
+              <ProductImageGallery product={galleryProduct} alt={product.name} className="product-detail-page__gallery" scrollable={false} swipeable style={{ width: '100%', height: 300, flex: '0 0 auto', borderRadius: 10, overflow: 'hidden' }} imageStyle={{ padding: 0, maxWidth: '86%', maxHeight: '86%' }} />
             </div>
 
             {/* Guarantees */}
@@ -175,6 +189,42 @@ export default function ProductDetailPage() {
               )}
             </div>
 
+            {colorVariants.length > 0 && (
+              <fieldset className="product-detail-page__colors" style={{ border: 0, padding: 0, margin: 0 }}>
+                <legend style={{ color: '#8892a4', fontSize: '14px', fontWeight: 600, marginBottom: 10 }}>
+                  Color{selectedVariant?.color || selectedVariant?.name ? `: ${selectedVariant.color || selectedVariant.name}` : ''}
+                </legend>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {colorVariants.map(variant => {
+                    const key = variantKey(variant);
+                    const label = String(variant.color || variant.name);
+                    const active = variantKey(selectedVariant) === key;
+                    return (
+                      <button
+                        type="button"
+                        key={key}
+                        aria-label={`Choose ${label}`}
+                        aria-pressed={active}
+                        onClick={() => { setSelectedColorKey(key); setQty(1); }}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 10px',
+                          borderRadius: 999, border: `1px solid ${active ? '#4f8ef7' : 'rgba(255,255,255,.14)'}`,
+                          background: active ? 'rgba(79,142,247,.14)' : 'rgba(255,255,255,.04)',
+                          color: '#fff', cursor: 'pointer', fontSize: 13,
+                        }}
+                      >
+                        <span aria-hidden="true" style={{
+                          width: 14, height: 14, borderRadius: '50%', border: '1px solid rgba(255,255,255,.35)',
+                          background: variant.hexColor || variant.colorHex || label,
+                        }} />
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
+            )}
+
             {/* Description */}
             <p style={{ fontSize: '15px', color: '#8892a4', lineHeight: 1.8 }}>
               {product.description}
@@ -210,7 +260,7 @@ export default function ProductDetailPage() {
                 </button>
                 <span style={{ width: '50px', textAlign: 'center', color: '#fff', fontWeight: 600 }}>{qty}</span>
                 <button
-                  onClick={() => setQty(Math.min(product.stock, qty + 1))}
+                  onClick={() => setQty(Math.min(currentStock, qty + 1))}
                   style={{
                     width: '40px',
                     height: '40px',
@@ -227,7 +277,7 @@ export default function ProductDetailPage() {
                   +
                 </button>
               </div>
-              <span style={{ color: '#4a5568', fontSize: '13px' }}>{product.stock} in stock</span>
+              <span style={{ color: '#4a5568', fontSize: '13px' }}>{currentStock} in stock</span>
             </div>
 
             {/* CTA buttons */}

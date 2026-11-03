@@ -39,6 +39,7 @@ function ProductCard({ product, onClick }) {
   const { format } = useCurrency();
   const [added, setAdded] = useState(false);
   const [nameExpanded, setNameExpanded] = useState(false);
+  const hasColorOptions = Array.isArray(product.variants) && product.variants.some(variant => variant?.color || variant?.name);
 
   const categoryColors = {
     phones: { bg: 'rgba(79,142,247,0.15)', color: '#4f8ef7' },
@@ -65,6 +66,7 @@ function ProductCard({ product, onClick }) {
 
   const handleAddToCart = (e) => {
     e.stopPropagation();
+    if (hasColorOptions) { onClick?.(); return; }
     addToCart(product, 1);
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
@@ -175,7 +177,7 @@ function ProductCard({ product, onClick }) {
         }}
       >
         <ShoppingCart size={14} />
-        {added ? '✓ Added!' : 'Add to Cart'}
+        {hasColorOptions ? 'Choose a Color' : added ? '✓ Added!' : 'Add to Cart'}
       </button>
     </div>
   );

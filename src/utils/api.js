@@ -66,6 +66,7 @@ export const api = {
   async getDropshipOverview(days = 30) { return request(`/dropship/overview?days=${encodeURIComponent(days)}`); },
   async getDropshipConnections() { return request('/dropship/connections'); },
   async getResearch() { return request('/dropship/research'); },
+  async extractDropshipProduct(input) { return request('/dropship/research/extract', { method: 'POST', body: body(input) }); },
   async createResearch(candidate) { return request('/dropship/research', { method: 'POST', body: body(candidate) }); },
   async generateProductContent(id) { return request(`/dropship/research/${encodeURIComponent(id)}/generate-content`, { method: 'POST', body: body({}) }); },
   async importResearch(id, updateExisting = false) { return request(`/dropship/research/${encodeURIComponent(id)}/import`, { method: 'POST', body: body({ updateExisting }) }); },
