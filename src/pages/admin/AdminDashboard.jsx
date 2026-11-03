@@ -1,318 +1,206 @@
+import { useMemo } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { useCurrency } from '../../context/CurrencyContext';
+import { isSampleProduct } from '../../utils/catalog';
+import { getOrderAmount, getOrderDate, getUniqueCustomerCount, isPaidOrder } from '../../utils/adminData';
 import {
-  DollarSign, ShoppingBag, Package, Users, Truck, TrendingUp,
-  Clock, CheckCircle, AlertCircle, RefreshCw, ExternalLink
+  DollarSign, ShoppingBag, Package, Users, Clock, CheckCircle,
+  AlertCircle, ArrowRight, TrendingUp, Truck,
 } from 'lucide-react';
 
-const REVENUE_DATA = [
-  { day:'Mon', rev:1240, orders:14 },
-  { day:'Tue', rev:980,  orders:11 },
-  { day:'Wed', rev:1580, orders:18 },
-  { day:'Thu', rev:2100, orders:24 },
-  { day:'Fri', rev:1760, orders:20 },
-  { day:'Sat', rev:2450, orders:28 },
-  { day:'Sun', rev:1320, orders:15 },
-];
+const PALETTE = {
+  Pending: '#f59e0b',
+  'Pending payment verification': '#d97706',
+  Processing: '#3b82f6',
+  Shipped: '#7c3aed',
+  Delivered: '#16a34a',
+  Cancelled: '#ef4444',
+  Canceled: '#ef4444',
+  Refunded: '#ef4444',
+};
 
-const TOP_PRODUCTS = [
-  { name:'ProBuds X3 Wireless Earbuds',  sold:127, rev:16383, margin:42, trend:+18 },
-  { name:'TurboCharge 65W GaN Charger',  sold:98,  rev:4802,  margin:55, trend:+9  },
-  { name:'UltraHub Pro 12-in-1',         sold:76,  rev:6764,  margin:38, trend:-4  },
-  { name:'BrightPhone Pro 15',           sold:52,  rev:46748, margin:22, trend:+31 },
-  { name:'LapBag Pro Backpack',          sold:89,  rev:7031,  margin:48, trend:+6  },
-];
-
-const SUPPLIER_ALERTS = [
-  { supplier:'AliExpress', msg:'5 items need reorder', level:'warn' },
-  { supplier:'CJ Dropshipping', msg:'Tracking updated for 8 orders', level:'info' },
-  { supplier:'Spocket', msg:'New product catalog available', level:'info' },
-  { supplier:'Zendrop', msg:'Shipping delay: 2-3 extra days', level:'error' },
-];
-
-const RECENT_ACTIVITY = [
-  { icon:'🛒', text:'New order ORD-8821 — Alice Johnson', amt:129, time:'2m ago' },
-  { icon:'🚚', text:'ORD-8810 shipped via DHL — tracking added', amt:null, time:'18m ago' },
-  { icon:'💰', text:'Payout processed to your account', amt:4820, time:'1h ago' },
-  { icon:'⚠️', text:'Low stock alert: TurboCharge 65W (3 units)', amt:null, time:'2h ago' },
-  { icon:'🔄', text:'Refund approved for ORD-8799', amt:-49, time:'3h ago' },
-  { icon:'📦', text:'Supplier shipped 34 units from CJ Dropshipping', amt:null, time:'5h ago' },
-];
-
-const StatusDot = ({ color }) => (
-  <span style={{ display:'inline-block', width:8, height:8, borderRadius:'50%', background:color, marginRight:6 }} />
-);
+function dateLabel(date) {
+  return date ? date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Date unavailable';
+}
 
 export default function AdminDashboard() {
-  const { orders, products } = useStore();
+  const { orders = [], adminProducts = [], user, navigate } = useStore();
   const { format } = useCurrency();
-  const maxRev = Math.max(...REVENUE_DATA.map(d => d.rev));
-  const recentOrders = orders.slice(0, 6);
 
-  const STATS = [
-    {
-      label:'Total Revenue', value: format(48293), sub:'+12.4% vs last month',
-      icon: DollarSign, color:'#eff6ff', iconColor:'#2563eb', up:true,
-    },
-    {
-      label:'Orders This Month', value: String(orders.length + 247), sub:'12 awaiting fulfillment',
-      icon: ShoppingBag, color:'#f0fdf4', iconColor:'#16a34a', up:true,
-    },
-    {
-      label:'Avg Order Value', value: format(96.20), sub:'+8 vs last month',
-      icon: TrendingUp, color:'#faf5ff', iconColor:'#7c3aed', up:true,
-    },
-    {
-      label:'Total Customers', value:'583', sub:'+34 new this week',
-      icon: Users, color:'#fff7ed', iconColor:'#f59e0b', up:true,
-    },
-    {
-      label:'Products Listed', value: String(products.length), sub:'4 categories',
-      icon: Package, color:'#f0fdfa', iconColor:'#0891b2', up:null,
-    },
-    {
-      label:'Supplier Orders', value:'28', sub:'14 in transit today',
-      icon: Truck, color:'#fef2f2', iconColor:'#ef4444', up:null,
-    },
+  const data = useMemo(() => {
+    const datedOrders = [...orders].map(order => ({ order, date: getOrderDate(order) }))
+      .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
+    const paidOrders = datedOrders.filter(({ order }) => isPaidOrder(order));
+    const paidRevenue = paidOrders.reduce((sum, { order }) => sum + getOrderAmount(order), 0);
+    const now = new Date();
+    const monthOrders = datedOrders.filter(({ date }) => date && date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth());
+    const pendingCount = datedOrders.filter(({ order }) => ['pending', 'processing'].includes(String(order.status || '').toLowerCase())).length;
+    const verificationCount = datedOrders.filter(({ order }) => order.paymentStatus === 'pending_verification').length;
+    const realProducts = adminProducts.filter(product => !isSampleProduct(product));
+    const liveProducts = realProducts.filter(product => !['Draft', 'Out of Stock'].includes(product.status));
+    const lowStockProducts = realProducts.filter(product => product.status !== 'Draft' && Number(product.stock ?? 0) < 5);
+
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const chart = Array.from({ length: 7 }, (_, index) => {
+      const day = new Date(today);
+      day.setDate(today.getDate() - (6 - index));
+      const rows = paidOrders.filter(({ date }) => date && date.getFullYear() === day.getFullYear() && date.getMonth() === day.getMonth() && date.getDate() === day.getDate());
+      return {
+        day,
+        revenue: rows.reduce((sum, { order }) => sum + getOrderAmount(order), 0),
+        orders: rows.length,
+      };
+    });
+
+    const topProducts = new Map();
+    paidOrders.forEach(({ order }) => {
+      (order.items || []).forEach(item => {
+        const product = item.product || {};
+        const key = String(product.id ?? product.name ?? 'unknown');
+        if (key === 'unknown') return;
+        const current = topProducts.get(key) || { name: product.name || 'Product', units: 0, revenue: 0 };
+        const quantity = Number(item.qty || 1);
+        current.units += quantity;
+        current.revenue += Number(product.price ?? item.price ?? 0) * quantity;
+        topProducts.set(key, current);
+      });
+    });
+
+    return {
+      datedOrders,
+      paidRevenue,
+      paidOrders,
+      monthOrders,
+      pendingCount,
+      verificationCount,
+      realProducts,
+      liveProducts,
+      lowStockProducts,
+      chart,
+      topProducts: [...topProducts.values()].sort((a, b) => b.revenue - a.revenue).slice(0, 5),
+      customerCount: getUniqueCustomerCount(orders),
+    };
+  }, [orders, adminProducts]);
+
+  const maxRevenue = Math.max(...data.chart.map(day => day.revenue), 1);
+  const recentOrders = data.datedOrders.slice(0, 6);
+  const attention = [];
+  if (data.verificationCount) attention.push({
+    title: 'Payment verification needed',
+    detail: `${data.verificationCount} order${data.verificationCount === 1 ? '' : 's'} awaiting manual verification.`,
+    color: '#d97706',
+  });
+  if (data.lowStockProducts.length) attention.push({
+    title: 'Low stock',
+    detail: `${data.lowStockProducts.length} product${data.lowStockProducts.length === 1 ? '' : 's'} have fewer than 5 units.`,
+    color: '#dc2626',
+  });
+
+  const stats = [
+    { label: 'Verified revenue', value: format(data.paidRevenue), note: 'Paid orders only', icon: DollarSign, color: '#eff6ff', iconColor: '#2563eb' },
+    { label: 'Orders this month', value: String(data.monthOrders.length), note: 'Based on saved orders', icon: ShoppingBag, color: '#f0fdf4', iconColor: '#16a34a' },
+    { label: 'Average paid order', value: format(data.paidOrders.length ? data.paidRevenue / data.paidOrders.length : 0), note: `${data.paidOrders.length} verified paid`, icon: TrendingUp, color: '#faf5ff', iconColor: '#7c3aed' },
+    { label: 'Customers with orders', value: String(data.customerCount), note: 'Unique order contacts', icon: Users, color: '#fff7ed', iconColor: '#f59e0b' },
+    { label: 'Published products', value: String(data.liveProducts.length), note: `${data.realProducts.length - data.liveProducts.length} drafts or unavailable`, icon: Package, color: '#f0fdfa', iconColor: '#0891b2' },
+    { label: 'Awaiting fulfillment', value: String(data.pendingCount), note: 'Pending or processing', icon: Truck, color: '#fef2f2', iconColor: '#ef4444' },
   ];
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
-
-      {/* Welcome Bar */}
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h2 style={{ fontWeight:800, fontSize:20, color:'#0f172a', margin:0 }}>Good day, Admin 👋</h2>
-          <p style={{ color:'#64748b', fontSize:13, margin:'2px 0 0' }}>Here's what's happening with your store today.</p>
+          <h2 style={{ fontWeight: 800, fontSize: 20, color: '#0f172a', margin: 0 }}>Welcome, {user?.name || 'Admin'}</h2>
+          <p style={{ color: '#64748b', fontSize: 13, margin: '2px 0 0' }}>Live activity from your Shoppercart store.</p>
         </div>
-        <div style={{ display:'flex', gap:8 }}>
-          <button style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 14px', borderRadius:8, border:'1px solid #e2e8f0', background:'#fff', color:'#374151', fontSize:12, fontWeight:600, cursor:'pointer' }}>
-            <RefreshCw size={13} /> Sync Suppliers
-          </button>
-          <button style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 14px', borderRadius:8, border:'none', background:'#2563eb', color:'#fff', fontSize:12, fontWeight:600, cursor:'pointer' }}>
-            + Add Product
-          </button>
-        </div>
+        <button onClick={() => navigate('admin-products')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: 'none', background: '#2563eb', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+          <Package size={14} /> Manage Products
+        </button>
       </div>
 
-      {/* KPI Stats */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))', gap:14 }}>
-        {STATS.map((s, i) => (
-          <div key={i} style={{ background:'#fff', borderRadius:14, border:'1px solid #e8edf3', padding:'16px 18px' }}>
-            <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:12 }}>
-              <div style={{ width:38, height:38, borderRadius:10, background:s.color, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                <s.icon size={18} color={s.iconColor} />
-              </div>
-              {s.up !== null && (
-                <span style={{ fontSize:10, fontWeight:700, color: s.up ? '#16a34a' : '#ef4444', background: s.up ? '#f0fdf4' : '#fef2f2', padding:'2px 7px', borderRadius:20 }}>
-                  {s.up ? 'up' : 'dn'} {s.sub.split('%')[0].replace('+','').replace('-','')}%
-                </span>
-              )}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 14 }}>
+        {stats.map(stat => (
+          <div key={stat.label} style={{ background: '#fff', borderRadius: 14, border: '1px solid #e8edf3', padding: '16px 18px' }}>
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: stat.color, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+              <stat.icon size={18} color={stat.iconColor} />
             </div>
-            <div style={{ fontSize:22, fontWeight:800, color:'#0f172a', letterSpacing:'-0.03em' }}>{s.value}</div>
-            <div style={{ fontSize:11, color:'#64748b', marginTop:3 }}>{s.label}</div>
-            <div style={{ fontSize:10, color:'#94a3b8', marginTop:1 }}>{s.sub}</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.03em' }}>{stat.value}</div>
+            <div style={{ fontSize: 11, color: '#64748b', marginTop: 3 }}>{stat.label}</div>
+            <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 1 }}>{stat.note}</div>
           </div>
         ))}
       </div>
 
-      {/* Revenue Chart + Supplier Alerts */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 320px', gap:16 }}>
-        {/* Chart */}
-        <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e8edf3', padding:'18px 20px' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
-            <div>
-              <div style={{ fontWeight:700, fontSize:14, color:'#0f172a' }}>Revenue Overview</div>
-              <div style={{ fontSize:11, color:'#94a3b8' }}>Last 7 days</div>
-            </div>
-            <div style={{ display:'flex', gap:14 }}>
-              <span style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, color:'#64748b' }}>
-                <span style={{ width:10, height:10, borderRadius:2, background:'#2563eb', display:'inline-block' }} />Revenue
-              </span>
-              <span style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, color:'#64748b' }}>
-                <span style={{ width:10, height:10, borderRadius:2, background:'#e0e7ff', display:'inline-block' }} />Orders
-              </span>
-            </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(260px,320px)', gap: 16 }}>
+        <section style={{ background: '#fff', borderRadius: 14, border: '1px solid #e8edf3', padding: '18px 20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <div><div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>Verified revenue</div><div style={{ fontSize: 11, color: '#94a3b8' }}>Last 7 days · paid orders only</div></div>
+            <span style={{ fontSize: 11, color: '#64748b' }}>Orders are counted separately</span>
           </div>
-          <div style={{ display:'flex', alignItems:'flex-end', gap:8, height:140 }}>
-            {REVENUE_DATA.map((d, i) => (
-              <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4, height:'100%', justifyContent:'flex-end' }}>
-                <span style={{ fontSize:9, fontWeight:700, color:'#2563eb' }}>{format(d.rev / 1000)}k</span>
-                <div style={{ width:'100%', borderRadius:'4px 4px 0 0', background:'linear-gradient(180deg,#2563eb,#93c5fd)', height:`${(d.rev/maxRev)*100}%`, minHeight:4, position:'relative' }}>
-                  <div style={{ position:'absolute', bottom:0, left:0, right:0, borderRadius:'4px 4px 0 0', background:'rgba(224,231,255,0.5)', height:`${(d.orders/28)*100}%` }} />
-                </div>
-                <span style={{ fontSize:9, color:'#94a3b8' }}>{d.day}</span>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 140 }}>
+            {data.chart.map(day => (
+              <div key={day.day.toISOString()} title={`${dateLabel(day.day)}: ${format(day.revenue)} · ${day.orders} paid orders`} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 5, height: '100%' }}>
+                <span style={{ fontSize: 9, fontWeight: 700, color: '#2563eb' }}>{day.revenue ? format(day.revenue) : ''}</span>
+                <div style={{ width: '100%', minHeight: 3, height: `${Math.max(2, day.revenue / maxRevenue * 100)}%`, background: day.revenue ? 'linear-gradient(180deg,#2563eb,#93c5fd)' : '#e2e8f0', borderRadius: '4px 4px 0 0' }} />
+                <span style={{ fontSize: 9, color: '#94a3b8' }}>{day.day.toLocaleDateString(undefined, { weekday: 'short' })}</span>
               </div>
             ))}
           </div>
-          <div style={{ display:'flex', justifyContent:'space-between', marginTop:14, paddingTop:14, borderTop:'1px solid #f1f5f9' }}>
-            <div style={{ textAlign:'center' }}>
-              <div style={{ fontSize:16, fontWeight:800, color:'#2563eb' }}>{format(11430)}</div>
-              <div style={{ fontSize:10, color:'#94a3b8' }}>Week Total</div>
-            </div>
-            <div style={{ textAlign:'center' }}>
-              <div style={{ fontSize:16, fontWeight:800, color:'#0f172a' }}>130</div>
-              <div style={{ fontSize:10, color:'#94a3b8' }}>Total Orders</div>
-            </div>
-            <div style={{ textAlign:'center' }}>
-              <div style={{ fontSize:16, fontWeight:800, color:'#16a34a' }}>{format(87.92)}</div>
-              <div style={{ fontSize:10, color:'#94a3b8' }}>Avg Order</div>
-            </div>
-            <div style={{ textAlign:'center' }}>
-              <div style={{ fontSize:16, fontWeight:800, color:'#7c3aed' }}>38%</div>
-              <div style={{ fontSize:10, color:'#94a3b8' }}>Avg Margin</div>
-            </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 14, paddingTop: 14, borderTop: '1px solid #f1f5f9' }}>
+            <div><div style={{ fontSize: 16, fontWeight: 800, color: '#2563eb' }}>{format(data.chart.reduce((sum, day) => sum + day.revenue, 0))}</div><div style={{ fontSize: 10, color: '#94a3b8' }}>7-day verified revenue</div></div>
+            <div><div style={{ fontSize: 16, fontWeight: 800, color: '#0f172a' }}>{data.chart.reduce((sum, day) => sum + day.orders, 0)}</div><div style={{ fontSize: 10, color: '#94a3b8' }}>Paid orders</div></div>
+            <div><div style={{ fontSize: 16, fontWeight: 800, color: '#16a34a' }}>{data.lowStockProducts.length}</div><div style={{ fontSize: 10, color: '#94a3b8' }}>Low-stock products</div></div>
           </div>
-        </div>
+        </section>
 
-        {/* Supplier Alerts */}
-        <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e8edf3', padding:'18px 20px' }}>
-          <div style={{ fontWeight:700, fontSize:14, color:'#0f172a', marginBottom:14 }}>Supplier Alerts</div>
-          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-            {SUPPLIER_ALERTS.map((a, i) => {
-              const colors = { warn:'#f59e0b', info:'#3b82f6', error:'#ef4444' };
-              const bgs    = { warn:'#fffbeb', info:'#eff6ff', error:'#fef2f2' };
-              return (
-                <div key={i} style={{ padding:'10px 12px', borderRadius:10, background:bgs[a.level], display:'flex', gap:10, alignItems:'flex-start' }}>
-                  <div style={{ marginTop:2 }}>
-                    {a.level === 'warn'  && <AlertCircle size={14} color={colors[a.level]} />}
-                    {a.level === 'info'  && <CheckCircle size={14} color={colors[a.level]} />}
-                    {a.level === 'error' && <AlertCircle size={14} color={colors[a.level]} />}
-                  </div>
-                  <div>
-                    <div style={{ fontSize:11, fontWeight:700, color:'#0f172a' }}>{a.supplier}</div>
-                    <div style={{ fontSize:11, color:'#64748b', marginTop:1 }}>{a.msg}</div>
-                  </div>
-                </div>
-              );
+        <section style={{ background: '#fff', borderRadius: 14, border: '1px solid #e8edf3', padding: '18px 20px' }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a', marginBottom: 14 }}>Needs attention</div>
+          {attention.length ? attention.map(item => (
+            <div key={item.title} style={{ padding: '10px 12px', borderRadius: 10, background: '#fffbeb', display: 'flex', gap: 10, marginBottom: 8 }}>
+              <AlertCircle size={15} color={item.color} style={{ flexShrink: 0, marginTop: 1 }} />
+              <div><div style={{ fontSize: 11, fontWeight: 700, color: '#0f172a' }}>{item.title}</div><div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{item.detail}</div></div>
+            </div>
+          )) : <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '12px 0', color: '#64748b', fontSize: 12 }}><CheckCircle size={15} color="#16a34a" /> No payment or stock alerts right now.</div>}
+          <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid #f1f5f9' }}>
+            <div style={{ fontWeight: 600, fontSize: 12, color: '#0f172a', marginBottom: 10 }}>Order fulfillment</div>
+            {['Pending', 'Processing', 'Shipped', 'Delivered'].map(status => {
+              const count = orders.filter(order => order.status === status).length;
+              const total = Math.max(orders.length, 1);
+              return <div key={status} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: PALETTE[status], flexShrink: 0 }} />
+                <span style={{ fontSize: 11, color: '#374151', flex: 1 }}>{status}</span>
+                <div style={{ flex: 2, height: 5, background: '#f1f5f9', borderRadius: 99 }}><div style={{ height: '100%', borderRadius: 99, background: PALETTE[status], width: `${count / total * 100}%` }} /></div>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#0f172a', minWidth: 18, textAlign: 'right' }}>{count}</span>
+              </div>;
             })}
           </div>
-
-          {/* Fulfillment Pipeline */}
-          <div style={{ marginTop:16, paddingTop:14, borderTop:'1px solid #f1f5f9' }}>
-            <div style={{ fontWeight:600, fontSize:12, color:'#0f172a', marginBottom:10 }}>Fulfillment Pipeline</div>
-            {[
-              { label:'Pending',    count:12, color:'#f59e0b' },
-              { label:'Processing', count:8,  color:'#3b82f6' },
-              { label:'Shipped',    count:31, color:'#7c3aed' },
-              { label:'Delivered',  count:189,color:'#16a34a' },
-            ].map((s, i) => (
-              <div key={i} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:7 }}>
-                <StatusDot color={s.color} />
-                <span style={{ fontSize:11, color:'#374151', flex:1 }}>{s.label}</span>
-                <div style={{ flex:2, height:5, background:'#f1f5f9', borderRadius:99 }}>
-                  <div style={{ height:'100%', borderRadius:99, background:s.color, width:`${(s.count/240)*100}%` }} />
-                </div>
-                <span style={{ fontSize:11, fontWeight:700, color:'#0f172a', minWidth:24 }}>{s.count}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        </section>
       </div>
 
-      {/* Top Products + Activity */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 300px', gap:16 }}>
-
-        {/* Top Products */}
-        <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e8edf3', overflow:'hidden' }}>
-          <div style={{ padding:'14px 18px', borderBottom:'1px solid #f1f5f9', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-            <div style={{ fontWeight:700, fontSize:14, color:'#0f172a' }}>Top Performing Products</div>
-            <span style={{ fontSize:11, color:'#3b82f6', cursor:'pointer', display:'flex', alignItems:'center', gap:3 }}>
-              View all <ExternalLink size={10} />
-            </span>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(260px,300px)', gap: 16 }}>
+        <section style={{ background: '#fff', borderRadius: 14, border: '1px solid #e8edf3', overflow: 'hidden' }}>
+          <div style={{ padding: '14px 18px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>Products sold</div>
+            <button onClick={() => navigate('admin-products')} style={{ fontSize: 11, color: '#2563eb', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}>Manage products <ArrowRight size={12} /></button>
           </div>
-          <table style={{ width:'100%', fontSize:12, borderCollapse:'collapse' }}>
-            <thead>
-              <tr style={{ background:'#f8fafc' }}>
-                {['#','Product','Units Sold','Revenue','Margin','Trend'].map(h => (
-                  <th key={h} style={{ padding:'9px 14px', textAlign:'left', fontSize:10, fontWeight:700, color:'#64748b', letterSpacing:'0.05em' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {TOP_PRODUCTS.map((p, i) => (
-                <tr key={i} style={{ borderTop:'1px solid #f8fafc' }}>
-                  <td style={{ padding:'10px 14px', fontWeight:700, color:'#94a3b8' }}>{i+1}</td>
-                  <td style={{ padding:'10px 14px', fontWeight:600, color:'#0f172a', maxWidth:180 }}>
-                    <div style={{ whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:180 }}>{p.name}</div>
-                  </td>
-                  <td style={{ padding:'10px 14px', color:'#374151' }}>{p.sold}</td>
-                  <td style={{ padding:'10px 14px', fontWeight:700, color:'#2563eb' }}>{format(p.rev)}</td>
-                  <td style={{ padding:'10px 14px' }}>
-                    <span style={{ background:'#f0fdf4', color:'#16a34a', borderRadius:6, padding:'2px 8px', fontSize:10, fontWeight:700 }}>{p.margin}%</span>
-                  </td>
-                  <td style={{ padding:'10px 14px' }}>
-                    <span style={{ fontSize:11, fontWeight:700, color: p.trend > 0 ? '#16a34a' : '#ef4444' }}>
-                      {p.trend > 0 ? '+' : ''}{p.trend}%
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+          {data.topProducts.length ? <div style={{ overflowX: 'auto' }}><table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse', minWidth: 360 }}>
+            <thead><tr style={{ background: '#f8fafc' }}>{['Product', 'Units', 'Paid product value'].map(header => <th key={header} style={{ padding: '9px 14px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#64748b' }}>{header}</th>)}</tr></thead>
+            <tbody>{data.topProducts.map(product => <tr key={product.name} style={{ borderTop: '1px solid #f8fafc' }}>
+              <td style={{ padding: '10px 14px', fontWeight: 600, color: '#0f172a' }}>{product.name}</td><td style={{ padding: '10px 14px', color: '#374151' }}>{product.units}</td><td style={{ padding: '10px 14px', fontWeight: 700, color: '#2563eb' }}>{format(product.revenue)}</td>
+            </tr>)}</tbody>
+          </table></div> : <div style={{ padding: 28, textAlign: 'center', color: '#94a3b8', fontSize: 12 }}>Paid product sales will appear here after payments are verified.</div>}
+        </section>
 
-        {/* Activity Feed */}
-        <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e8edf3', padding:'18px 20px' }}>
-          <div style={{ fontWeight:700, fontSize:14, color:'#0f172a', marginBottom:14 }}>Recent Activity</div>
-          <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
-            {RECENT_ACTIVITY.map((a, i) => (
-              <div key={i} style={{ display:'flex', gap:10, padding:'9px 0', borderBottom: i < RECENT_ACTIVITY.length-1 ? '1px solid #f8fafc' : 'none' }}>
-                <span style={{ fontSize:16, flexShrink:0 }}>{a.icon}</span>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:11, color:'#374151', lineHeight:1.4 }}>
-                    {a.text}{a.amt !== null ? ` — ${format(Math.abs(a.amt))}` : ''}
-                  </div>
-                  <div style={{ fontSize:10, color:'#94a3b8', marginTop:2, display:'flex', alignItems:'center', gap:4 }}>
-                    <Clock size={9} /> {a.time}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Orders Table */}
-      <div style={{ background:'#fff', borderRadius:14, border:'1px solid #e8edf3', overflow:'hidden' }}>
-        <div style={{ padding:'14px 18px', borderBottom:'1px solid #f1f5f9', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <div style={{ fontWeight:700, fontSize:14, color:'#0f172a' }}>Recent Orders</div>
-          <span style={{ fontSize:11, color:'#3b82f6', cursor:'pointer' }}>View all orders</span>
-        </div>
-        {recentOrders.length === 0 ? (
-          <div style={{ padding:40, textAlign:'center', color:'#94a3b8', fontSize:13 }}>No orders yet. Demo data: 247 historical orders.</div>
-        ) : (
-          <div style={{ overflowX:'auto' }}>
-            <table style={{ width:'100%', fontSize:12, borderCollapse:'collapse', minWidth:600 }}>
-              <thead>
-                <tr style={{ background:'#f8fafc' }}>
-                  {['Order ID','Customer','Items','Total','Status','Action'].map(h => (
-                    <th key={h} style={{ padding:'9px 14px', textAlign:'left', fontSize:10, fontWeight:700, color:'#64748b', letterSpacing:'0.05em' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {recentOrders.map(o => {
-                  const SC = { Pending:'#f59e0b', Processing:'#3b82f6', Shipped:'#7c3aed', Delivered:'#16a34a' };
-                  return (
-                    <tr key={o.id} style={{ borderTop:'1px solid #f8fafc' }}>
-                      <td style={{ padding:'10px 14px', fontFamily:'monospace', fontSize:11, color:'#0f172a' }}>{o.id}</td>
-                      <td style={{ padding:'10px 14px', fontWeight:600, color:'#374151' }}>{o.customer}</td>
-                      <td style={{ padding:'10px 14px', color:'#64748b' }}>{o.items.reduce((s,i)=>s+i.qty,0)} items</td>
-                      <td style={{ padding:'10px 14px', fontWeight:700, color:'#2563eb' }}>{format(o.total)}</td>
-                      <td style={{ padding:'10px 14px' }}>
-                        <span style={{ background:(SC[o.status]||'#94a3b8')+'18', color:SC[o.status]||'#64748b', borderRadius:20, padding:'2px 10px', fontWeight:700, fontSize:10 }}>{o.status}</span>
-                      </td>
-                      <td style={{ padding:'10px 14px' }}>
-                        <button style={{ fontSize:11, color:'#2563eb', background:'none', border:'none', cursor:'pointer', fontWeight:600 }}>View</button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <section style={{ background: '#fff', borderRadius: 14, border: '1px solid #e8edf3', padding: '18px 20px' }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a', marginBottom: 12 }}>Recent orders</div>
+          {recentOrders.length ? recentOrders.map(({ order, date }) => (
+            <div key={order.id} style={{ display: 'flex', gap: 9, padding: '9px 0', borderBottom: '1px solid #f8fafc' }}>
+              <Clock size={14} color={PALETTE[order.status] || '#64748b'} style={{ flexShrink: 0, marginTop: 1 }} />
+              <div style={{ minWidth: 0, flex: 1 }}><div style={{ fontSize: 11, fontWeight: 600, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis' }}>{order.id} · {order.customer}</div><div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>{dateLabel(date)} · {order.status}</div></div>
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap' }}>{format(getOrderAmount(order))}</span>
+            </div>
+          )) : <div style={{ color: '#94a3b8', fontSize: 12, padding: '12px 0' }}>No orders have been placed yet.</div>}
+          <button onClick={() => navigate('admin-orders')} style={{ marginTop: 12, padding: 0, color: '#2563eb', background: 'none', border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>View all orders <ArrowRight size={12} style={{ verticalAlign: 'middle' }} /></button>
+        </section>
       </div>
     </div>
   );

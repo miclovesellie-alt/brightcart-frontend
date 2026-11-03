@@ -2,12 +2,15 @@ const LEGACY_SAMPLE_PRODUCT_IDS = new Set(
   Array.from({ length: 34 }, (_, index) => index + 1),
 );
 
-export function isStorefrontProduct(product) {
+export function isSampleProduct(product) {
   const id = Number(product?.id);
-  const isLegacySample = LEGACY_SAMPLE_PRODUCT_IDS.has(id) && product.isSample !== false;
+  return product?.isSample === true
+    || (LEGACY_SAMPLE_PRODUCT_IDS.has(id) && product?.isSample !== false);
+}
+
+export function isStorefrontProduct(product) {
   return Boolean(product)
-    && !isLegacySample
-    && product.isSample !== true
+    && !isSampleProduct(product)
     && product.status !== 'Draft'
     && product.status !== 'Out of Stock';
 }

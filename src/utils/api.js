@@ -37,6 +37,7 @@ async function request(path, options = {}) {
 const body = value => JSON.stringify(value);
 
 export const api = {
+  async getHealth() { return request('/health', { auth: false }); },
   async login(email, password) {
     return request('/auth/login', { method: 'POST', auth: false, body: body({ email, password }) });
   },

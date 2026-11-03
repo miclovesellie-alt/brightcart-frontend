@@ -250,6 +250,13 @@ export function StoreProvider({ children }) {
     return result.data || [];
   }, []);
 
+  const updateOrder = useCallback(async (id, patch) => {
+    const result = await api.updateOrder(id, sanitizeObject(patch));
+    const saved = result.data;
+    setOrders(prev => prev.map(order => order.id === saved.id ? saved : order));
+    return saved;
+  }, []);
+
   const cartCount = cart.reduce((sum, item) => sum + item.qty, 0);
   const cartTotal = cart.reduce((sum, item) => sum + item.product.price * item.qty, 0);
 
@@ -277,6 +284,7 @@ export function StoreProvider({ children }) {
       deleteProduct,
       refreshAdminProducts,
       refreshAdminOrders,
+      updateOrder,
       adminUsers,
       addAdminUser,
       removeAdminUser,

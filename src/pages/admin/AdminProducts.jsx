@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { useCurrency } from '../../context/CurrencyContext';
+import { isSampleProduct } from '../../utils/catalog';
 import { Search, Plus, Edit2, Trash2, X } from 'lucide-react';
 
 const CATEGORIES = [
@@ -12,7 +13,6 @@ const CATEGORIES = [
 ];
 
 const STATUS_OPTIONS = ['Active', 'Draft', 'Out of Stock'];
-const SUPPLIERS = ['AliExpress', 'CJ Dropshipping', 'Spocket', 'Zendrop', 'Oberlo'];
 
 const PRODUCT_ICONS = [
   { label: 'Phone',    value: 'phone'    },
@@ -43,7 +43,7 @@ function getIcon(p) {
 
 const EMPTY_FORM = {
   name: '', category: 'phones', price: '', originalPrice: '', cost: '',
-  stock: '', description: '', supplier: 'AliExpress', status: 'Active',
+  stock: '', description: '', supplier: '', status: 'Active',
   sku: '', icon: 'phone',
 };
 
@@ -57,7 +57,8 @@ export default function AdminProducts() {
   const [form, setForm]           = useState(EMPTY_FORM);
   const [deleteId, setDeleteId]   = useState(null);
 
-  const filtered = products.filter(p => {
+  const realProducts = products.filter(p => !isSampleProduct(p));
+  const filtered = realProducts.filter(p => {
     const matchCat = cat === 'All' || p.category === cat;
     const matchQ   = p.name.toLowerCase().includes(search.toLowerCase());
     return matchCat && matchQ;
@@ -105,7 +106,7 @@ export default function AdminProducts() {
         <div style={{ flex: 1 }}>
           <h2 style={{ fontWeight: 800, fontSize: 18, color: '#0f172a', margin: 0 }}>Products</h2>
           <p style={{ color: '#64748b', fontSize: 12, margin: '2px 0 0' }}>
-            {products.length} products &mdash; {filtered.length} shown
+            {realProducts.length} products &mdash; {filtered.length} shown
           </p>
         </div>
         <button
@@ -183,7 +184,7 @@ export default function AdminProducts() {
                       {p.stock ?? 0}
                       {(p.stock || 0) < 5 && p.stock !== undefined && <span style={{ marginLeft: 4, fontSize: 9, color: '#ef4444' }}>LOW</span>}
                     </td>
-                    <td style={{ padding: '10px 14px', color: '#64748b' }}>{p.supplier || 'AliExpress'}</td>
+                    <td style={{ padding: '10px 14px', color: '#64748b' }}>{p.supplier || 'Not assigned'}</td>
                     <td style={{ padding: '10px 14px' }}>
                       <span style={{ background: sc + '18', color: sc, borderRadius: 20, padding: '2px 9px', fontWeight: 700, fontSize: 10 }}>{p.status || 'Active'}</span>
                     </td>
@@ -259,9 +260,7 @@ export default function AdminProducts() {
               {/* Supplier */}
               <div>
                 <label style={lbl}>SUPPLIER</label>
-                <select value={form.supplier} onChange={e => F('supplier', e.target.value)} style={inp}>
-                  {SUPPLIERS.map(s => <option key={s}>{s}</option>)}
-                </select>
+                <input value={form.supplier} onChange={e => F('supplier', e.target.value)} placeholder="Enter a verified supplier (optional)" style={inp} />
               </div>
 
               {/* Status */}

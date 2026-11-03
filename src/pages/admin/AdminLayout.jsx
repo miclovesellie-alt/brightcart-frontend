@@ -6,10 +6,11 @@ import {
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import CurrencySelector from '../../components/CurrencySelector';
+import { isSampleProduct } from '../../utils/catalog';
 
 const ALL_NAV = [
   { label: 'Dashboard',  icon: LayoutDashboard, page: 'admin-dashboard',  badge: null,  roles: ['super_admin','admin','moderator'] },
-  { label: 'Orders',     icon: ShoppingBag,     page: 'admin-orders',     badge: '12',  roles: ['super_admin','admin','moderator'] },
+  { label: 'Orders',     icon: ShoppingBag,     page: 'admin-orders',     badge: null,  roles: ['super_admin','admin','moderator'] },
   { label: 'Products',   icon: Package,         page: 'admin-products',   badge: null,  roles: ['super_admin','admin'] },
   { label: 'AI Dropshipping', icon: Sparkles,    page: 'admin-dropshipping', badge: null, roles: ['super_admin','admin'] },
   { label: 'Suppliers',  icon: Truck,           page: 'admin-suppliers',  badge: null,  roles: ['super_admin'] },
@@ -25,22 +26,23 @@ const ROLE_BADGE = {
   moderator:   { label: 'Moderator',   color: '#34d399', bg: '#05966922', icon: Eye },
 };
 
-const NOTIFICATIONS = [
-  { text: 'New order #ORD-8821 received', time: '2m ago', dot: '#22c55e' },
-  { text: 'Supplier AliExpress updated tracking', time: '14m ago', dot: '#3b82f6' },
-  { text: 'Low stock: TurboCharge 65W (3 left)', time: '1h ago', dot: '#f59e0b' },
-  { text: 'Refund request from B. Smith', time: '3h ago', dot: '#ef4444' },
-];
-
 export default function AdminLayout({ children, activePage }) {
-  const { navigate, logout, user } = useStore();
+  const { navigate, logout, user, orders = [], adminProducts = [] } = useStore();
   const [open, setOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
 
   const userRole = user?.role || 'moderator';
   const NAV = ALL_NAV.filter(item => item.roles.includes(userRole));
   const roleMeta = ROLE_BADGE[userRole] || ROLE_BADGE.moderator;
-  const RoleIcon = roleMeta.icon;
+  const awaitingPayment = orders.filter(order => order.paymentStatus === 'pending_verification').length;
+  const awaitingFulfillment = orders.filter(order => ['pending', 'processing'].includes(String(order.status || '').toLowerCase())).length;
+  const lowStock = adminProducts.filter(product => !isSampleProduct(product) && product.status !== 'Draft' && Number(product.stock ?? 0) < 5).length;
+  const notifications = [
+    ...(awaitingPayment ? [{ text: `${awaitingPayment} order${awaitingPayment === 1 ? '' : 's'} need payment verification`, dot: '#f59e0b' }] : []),
+    ...(awaitingFulfillment ? [{ text: `${awaitingFulfillment} order${awaitingFulfillment === 1 ? '' : 's'} awaiting fulfillment`, dot: '#3b82f6' }] : []),
+    ...(lowStock ? [{ text: `${lowStock} product${lowStock === 1 ? '' : 's'} below 5 units of stock`, dot: '#ef4444' }] : []),
+  ];
+  const orderBadge = awaitingPayment + awaitingFulfillment;
 
   const Sidebar = () => (
     <div style={{ display:'flex', flexDirection:'column', height:'100%', background:'#0b1222' }}>
@@ -78,9 +80,9 @@ export default function AdminLayout({ children, activePage }) {
             >
               <item.icon size={16} />
               <span style={{ flex:1, textAlign:'left' }}>{item.label}</span>
-              {item.badge && (
+              {(item.page === 'admin-orders' ? orderBadge : item.badge) > 0 && (
                 <span style={{ fontSize:10, fontWeight:700, background:'#ef4444', color:'#fff', borderRadius:20, padding:'1px 6px' }}>
-                  {item.badge}
+                  {item.page === 'admin-orders' ? orderBadge : item.badge}
                 </span>
               )}
               {active && <ChevronRight size={12} />}
@@ -159,23 +161,19 @@ export default function AdminLayout({ children, activePage }) {
                 style={{ position:'relative', padding:7, borderRadius:8, background:'#f1f5f9', border:'none', cursor:'pointer', display:'flex' }}
               >
                 <Bell size={17} color="#64748b" />
-                <span style={{ position:'absolute', top:4, right:4, width:7, height:7, borderRadius:'50%', background:'#ef4444', border:'2px solid #fff' }} />
+                {notifications.length > 0 && <span style={{ position:'absolute', top:4, right:4, width:7, height:7, borderRadius:'50%', background:'#ef4444', border:'2px solid #fff' }} />}
               </button>
               {notifOpen && (
                 <div style={{ position:'absolute', right:0, top:44, width:300, background:'#fff', borderRadius:12, border:'1px solid #e2e8f0', boxShadow:'0 8px 30px rgba(0,0,0,0.12)', zIndex:50, overflow:'hidden' }}>
-                  <div style={{ padding:'12px 16px', borderBottom:'1px solid #f1f5f9', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                    <span style={{ fontWeight:700, fontSize:13, color:'#0f172a' }}>Notifications</span>
-                    <span style={{ fontSize:10, color:'#3b82f6', cursor:'pointer' }}>Mark all read</span>
-                  </div>
-                  {NOTIFICATIONS.map((n, i) => (
+                  <div style={{ padding:'12px 16px', borderBottom:'1px solid #f1f5f9' }}><span style={{ fontWeight:700, fontSize:13, color:'#0f172a' }}>Store alerts</span></div>
+                  {notifications.length ? notifications.map((n, i) => (
                     <div key={i} style={{ padding:'10px 16px', borderBottom:'1px solid #f8fafc', display:'flex', gap:10, alignItems:'flex-start' }}>
                       <div style={{ width:7, height:7, borderRadius:'50%', background:n.dot, marginTop:5, flexShrink:0 }} />
                       <div>
                         <div style={{ fontSize:12, color:'#374151', lineHeight:1.4 }}>{n.text}</div>
-                        <div style={{ fontSize:10, color:'#94a3b8', marginTop:2 }}>{n.time}</div>
                       </div>
                     </div>
-                  ))}
+                  )) : <div style={{ padding:'14px 16px', fontSize:12, color:'#64748b' }}>No payment, fulfillment, or stock alerts.</div>}
                 </div>
               )}
             </div>
