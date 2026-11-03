@@ -1,15 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { useCurrency } from '../context/CurrencyContext';
 import { Search, Star, ShoppingCart, Filter, ChevronDown } from 'lucide-react';
-
-const CATEGORIES = [
-  { label: 'All', value: 'all' },
-  { label: 'Phones', value: 'phones' },
-  { label: 'Phone Accessories', value: 'phone-accessories' },
-  { label: 'Laptop Accessories', value: 'laptop-accessories' },
-  { label: 'Electrical', value: 'electrical' },
-];
+import { formatCategory } from '../utils/catalog';
 
 const SORT_OPTIONS = [
   { label: 'Featured', value: 'featured' },
@@ -21,8 +14,8 @@ const SORT_OPTIONS = [
 
 function SkeletonCard() {
   return (
-    <div className="glass" style={{ borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-      <div className="skeleton" style={{ height: '200px', borderRadius: '8px' }} />
+    <div className="glass store-product-card" style={{ borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      <div className="skeleton store-product-card__image" style={{ height: '200px', borderRadius: '8px' }} />
       <div className="skeleton" style={{ height: '16px', width: '60px', borderRadius: '100px' }} />
       <div className="skeleton" style={{ height: '18px', width: '80%' }} />
       <div className="skeleton" style={{ height: '14px', width: '40%' }} />
@@ -53,11 +46,10 @@ function ProductCard({ product, onClick }) {
 
   return (
     <div
-      className="glass"
+      className="glass store-product-card"
       onClick={onClick}
       style={{
         borderRadius: '16px',
-        padding: '24px',
         cursor: 'pointer',
         transition: 'all 0.3s ease',
         display: 'flex',
@@ -75,13 +67,13 @@ function ProductCard({ product, onClick }) {
         e.currentTarget.style.boxShadow = 'none';
       }}
     >
-      <div className="product-img-wrap" style={{ height: '200px', background: '#111118', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-        <img
+      <div className="product-img-wrap store-product-card__image" style={{ background: '#111118', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+        {product.image && <img
           src={product.image}
           alt={product.name}
           style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '12px', transition: 'transform 0.4s ease' }}
-          onError={(e) => { e.target.style.display = 'none'; e.target.parentNode.innerHTML = '<span style="font-size:48px">📦</span>'; }}
-        />
+          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+        />}
       </div>
 
       {product.tag && (
@@ -102,18 +94,20 @@ function ProductCard({ product, onClick }) {
 
       <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#fff', lineHeight: 1.4 }}>{product.name}</h3>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ display: 'flex' }}>
-          {[...Array(5)].map((_, i) => (
-            <Star key={i} size={12} fill={i < Math.floor(product.rating) ? '#f6c90e' : 'none'} color={i < Math.floor(product.rating) ? '#f6c90e' : '#4a5568'} />
-          ))}
+      {Number(product.reviews) > 0 && Number(product.rating) > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ display: 'flex' }}>
+            {[...Array(5)].map((_, i) => (
+              <Star key={i} size={12} fill={i < Math.floor(product.rating) ? '#f6c90e' : 'none'} color={i < Math.floor(product.rating) ? '#f6c90e' : '#4a5568'} />
+            ))}
+          </div>
+          <span style={{ fontSize: '12px', color: '#8892a4' }}>({product.reviews})</span>
         </div>
-        <span style={{ fontSize: '12px', color: '#8892a4' }}>({product.reviews})</span>
-      </div>
+      )}
 
       <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
         <span style={{ fontSize: '20px', fontWeight: 700, color: '#fff' }}>{format(product.price)}</span>
-        {product.originalPrice && (
+        {Number(product.originalPrice) > Number(product.price) && (
           <span style={{ fontSize: '13px', color: '#4a5568', textDecoration: 'line-through' }}>{format(product.originalPrice)}</span>
         )}
       </div>
@@ -157,19 +151,20 @@ function ProductCard({ product, onClick }) {
 }
 
 export default function ProductsPage() {
-  const { products, navigate } = useStore();
+  const { products, productsLoading, productsError, pageParams, navigate } = useStore();
   const { format } = useCurrency();
-  const [loading, setLoading] = useState(true);
-  const [activeCategory, setActiveCategory] = useState('all');
+  const [activeCategory, setActiveCategory] = useState(pageParams.category || 'all');
   const [sortBy, setSortBy] = useState('featured');
   const [search, setSearch] = useState('');
   const [visibleCount, setVisibleCount] = useState(12);
   const [sortOpen, setSortOpen] = useState(false);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 800);
-    return () => clearTimeout(timer);
-  }, []);
+  const categories = [
+    { label: 'All', value: 'all' },
+    ...[...new Set(products.map(product => product.category).filter(Boolean))]
+      .sort()
+      .map(category => ({ label: formatCategory(category), value: category })),
+  ];
 
   const filtered = products
     .filter(p => {
@@ -190,8 +185,8 @@ export default function ProductsPage() {
   const visible = filtered.slice(0, visibleCount);
 
   return (
-    <div style={{ background: '#0a0a0f', minHeight: '100vh', paddingTop: '80px' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 32px' }}>
+    <div className="products-page" style={{ background: '#0a0a0f', minHeight: '100vh', paddingTop: '80px' }}>
+      <div className="products-page__content" style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 32px' }}>
 
         {/* Header */}
         <div style={{ marginBottom: '40px' }}>
@@ -239,7 +234,7 @@ export default function ProductsPage() {
 
           {/* Category Pills */}
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {CATEGORIES.map(cat => (
+            {categories.map(cat => (
               <button
                 key={cat.value}
                 onClick={() => { setActiveCategory(cat.value); setVisibleCount(12); }}
@@ -324,27 +319,22 @@ export default function ProductsPage() {
         </div>
 
         {/* Grid */}
-        {loading ? (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: '24px',
-          }}>
-            {[...Array(12)].map((_, i) => <SkeletonCard key={i} />)}
-          </div>
+        {productsLoading ? (
+          <div className="store-product-grid" aria-busy="true">{[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}</div>
         ) : (
           <>
             {visible.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '80px 0', color: '#8892a4' }}>
-                <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔍</div>
-                <p style={{ fontSize: '16px' }}>No products found matching your search.</p>
+                <p style={{ fontSize: '16px' }}>
+                  {productsError
+                    ? 'The catalog is temporarily unavailable. Please try again shortly.'
+                    : search || activeCategory !== 'all'
+                      ? 'No products match these filters.'
+                      : 'New products will appear here when they’re added to the store.'}
+                </p>
               </div>
             ) : (
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                gap: '24px',
-              }}>
+              <div className="store-product-grid">
                 {visible.map(product => (
                   <ProductCard
                     key={product.id}
