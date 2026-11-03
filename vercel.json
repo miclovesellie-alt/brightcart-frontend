@@ -1,4 +1,17 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "vite"
+  "framework": "vite",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "brightcart.uhcacadamy.com"
+        }
+      ],
+      "destination": "https://shoppercart.uhcacadamy.com/:path*",
+      "permanent": true
+    }
+  ]
 }

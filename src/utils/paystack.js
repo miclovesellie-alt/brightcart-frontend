@@ -25,7 +25,7 @@ export function payWithPaystack({
 
   const handler = window.PaystackPop.setup({
     key: publicKey,
-    email: email || 'customer@brightcart.store',
+    email: email || 'customer@shoppercart.uhcacadamy.com',
     amount: amountInSubunits,
     currency: currency,
     ref: 'BC-' + Math.floor(Math.random() * 1000000000 + 1),
@@ -34,7 +34,7 @@ export function payWithPaystack({
         {
           display_name: 'Store',
           variable_name: 'store',
-          value: 'BrightCart Electronics',
+          value: 'Shoppercart Electronics',
         },
       ],
     },

@@ -35,7 +35,7 @@ export default function Footer() {
           <div>
             <button onClick={() => navigate('home')} style={{ display:'flex', alignItems:'center', gap:'8px', background:'none', border:'none', cursor:'pointer', padding:0, marginBottom:'12px' }}>
               <Zap size={20} color="#4f8ef7" fill="#4f8ef7" />
-              <span style={{ color:'#fff', fontSize:'20px', fontWeight:800, letterSpacing:'-0.5px' }}>BrightCart</span>
+              <span style={{ color:'#fff', fontSize:'20px', fontWeight:800, letterSpacing:'-0.5px' }}>Shoppercart</span>
             </button>
             <p style={{ color:'#4a5568', fontSize:'14px', maxWidth:'260px', lineHeight:1.6 }}>
               Premium tech delivered to your door. Curated for the modern world.
@@ -80,7 +80,7 @@ export default function Footer() {
         <div className="section-divider" style={{ marginBottom:'24px' }} />
         <div style={{ display:'flex', justifyContent:'center', alignItems:'center' }}>
           <p style={{ color:'#4a5568', fontSize:'13px' }}>
-            © {year} BrightCart Tech Store. Built with ❤️ and a lot of caffeine.
+            © {year} Shoppercart Tech Store. Built with ❤️ and a lot of caffeine.
           </p>
         </div>
       </div>

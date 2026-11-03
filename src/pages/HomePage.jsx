@@ -1,11 +1,13 @@
 import { useRef, useEffect, useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { useCurrency } from '../context/CurrencyContext';
+import { formatCategory, isStorefrontProduct } from '../utils/catalog';
 import HeroAssembler from '../components/HeroAssembler';
 import ImageAssembler from '../components/ImageAssembler';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ChevronDown, Star, ShoppingCart, ArrowRight, Package, Truck, Shield, Headphones } from 'lucide-react';
+import './HomePage.css';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -29,7 +31,7 @@ function HeroSection() {
   }, []);
 
   return (
-    <section style={{
+    <section className="home-hero" style={{
       minHeight: '100vh',
       display: 'flex',
       alignItems: 'center',
@@ -53,7 +55,7 @@ function HeroSection() {
       }} />
 
       {/* 2-column grid */}
-      <div style={{
+      <div className="home-hero__grid" style={{
         maxWidth: '1280px', margin: '0 auto', padding: '0 40px',
         display: 'grid',
         gridTemplateColumns: '42fr 58fr',
@@ -65,7 +67,7 @@ function HeroSection() {
       }}>
 
         {/* LEFT: Copy */}
-        <div ref={textRef}>
+        <div ref={textRef} className="home-hero__copy">
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: '8px',
             padding: '6px 16px',
@@ -133,7 +135,7 @@ function HeroSection() {
         </div>
 
         {/* RIGHT: 3D Hero Assembler */}
-        <div style={{
+        <div className="home-hero__visual" style={{
           position: 'relative',
           height: '600px',
           minHeight: '420px',
@@ -208,7 +210,9 @@ function HeroSection() {
 
 // ─── Marquee Ticker ───────────────────────────────────────────────────────────
 function MarqueeTicker() {
-  const items = 'MacBook Pro · AirPods Pro · Samsung Galaxy · Sony WH-1000XM5 · Logitech MX Keys · Razer DeathAdder · iPad Pro · Dell XPS · ASUS ROG · Pixel 9 Pro · OnePlus 13 · Bose QC45 · '.repeat(2);
+  const { products } = useStore();
+  const items = products.filter(isStorefrontProduct).map(product => product.name).join(' · ');
+  if (!items) return null;
   return (
     <div style={{
       background: '#0a0a0f',
@@ -247,7 +251,7 @@ function ProductCard({ product, onClick }) {
 
   return (
     <div
-      className="glass"
+      className="glass home-product-card"
       onClick={onClick}
       style={{
         borderRadius: '16px', padding: '24px', cursor: 'pointer',
@@ -315,7 +319,7 @@ function ProductCard({ product, onClick }) {
 function FeaturedProducts() {
   const { products, navigate } = useStore();
   const cardRefs = useRef([]);
-  const featured = products.filter(p => p.featured).slice(0, 6);
+  const featured = products.filter(p => isStorefrontProduct(p) && p.featured).slice(0, 6);
 
   useEffect(() => {
     cardRefs.current.filter(Boolean).forEach((card, i) => {
@@ -331,8 +335,10 @@ function FeaturedProducts() {
     });
   }, []);
 
+  if (featured.length === 0) return null;
+
   return (
-    <section style={{ background: '#0a0a0f', padding: '100px 0' }}>
+    <section className="home-section" style={{ background: '#0a0a0f', padding: '100px 0' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 32px' }}>
         <div style={{ marginBottom: '56px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
@@ -341,7 +347,7 @@ function FeaturedProducts() {
           </div>
           <h2 style={{ fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>Featured Products</h2>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
+        <div className="home-featured-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
           {featured.map((product, i) => (
             <div
               key={product.id}
@@ -400,15 +406,32 @@ function HowItWorks() {
 
 // ─── Categories ───────────────────────────────────────────────────────────────
 function CategoriesSection() {
-  const { navigate } = useStore();
-  const categories = [
-    { name: 'Phones',             icon: '📱', count: '8 products',  image: '/phone.jpg',    color: '#4f8ef7' },
-    { name: 'Phone Accessories',  icon: '🎧', count: '10 products', image: '/earbuds.jpg',  color: '#a855f7' },
-    { name: 'Laptop Accessories', icon: '⌨️', count: '10 products', image: '/keyboard.jpg', color: '#06b6d4' },
-    { name: 'Electrical',         icon: '⚡', count: '6 products',  image: '/fan.jpg',      color: '#22c55e' },
-  ];
+  const { navigate, products } = useStore();
+  const categoryStyle = {
+    phones: { icon: '📱', color: '#4f8ef7' },
+    'phone-accessories': { icon: '🎧', color: '#a855f7' },
+    'laptop-accessories': { icon: '⌨️', color: '#06b6d4' },
+    electrical: { icon: '⚡', color: '#22c55e' },
+  };
+  const categoryMap = new Map();
+  products.filter(isStorefrontProduct).forEach(product => {
+    const key = String(product.category || '').trim();
+    if (!key) return;
+    const category = categoryMap.get(key) || {
+      name: formatCategory(key), icon: categoryStyle[key]?.icon || '▦',
+      count: 0, image: product.image, color: categoryStyle[key]?.color || '#4f8ef7',
+    };
+    category.count += 1;
+    if (!category.image && product.image) category.image = product.image;
+    categoryMap.set(key, category);
+  });
+  const categories = [...categoryMap.values()].map(category => ({
+    ...category,
+    count: `${category.count} ${category.count === 1 ? 'product' : 'products'}`,
+  }));
+  if (categories.length === 0) return null;
   return (
-    <section style={{ background: '#111118', padding: '100px 0' }}>
+    <section className="home-section" style={{ background: '#111118', padding: '100px 0' }}>
       <div className="section-divider" style={{ marginBottom: '100px' }} />
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 32px' }}>
         <div style={{ marginBottom: '56px' }}>
@@ -418,11 +441,11 @@ function CategoriesSection() {
           </div>
           <h2 style={{ fontSize: 'clamp(28px, 4vw, 48px)', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>Categories</h2>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
+        <div className="home-category-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
           {categories.map((cat) => (
             <button
               key={cat.name}
-              className="category-card glass"
+              className="category-card glass home-category-card"
               onClick={() => navigate('products')}
               style={{ padding: '32px 24px', textAlign: 'left', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', cursor: 'pointer', borderRadius: '16px' }}
             >
@@ -445,8 +468,9 @@ function CategoriesSection() {
 
 // ─── Stats ────────────────────────────────────────────────────────────────────
 function StatsSection() {
+  const { products } = useStore();
   const stats = [
-    { value: '34+',    label: 'Products',    icon: Package   },
+    { value: String(products.filter(isStorefrontProduct).length), label: 'Products', icon: Package },
     { value: '2,500+', label: 'Happy Orders',icon: Truck     },
     { value: '4.9★',   label: 'Avg Rating',  icon: Star      },
     { value: '24/7',   label: 'Support',     icon: Headphones},
@@ -468,7 +492,7 @@ function StatsSection() {
   }, []);
 
   return (
-    <section className="dot-grid" style={{ background: '#0a0a0f', padding: '100px 0' }}>
+    <section className="dot-grid home-section" style={{ background: '#0a0a0f', padding: '100px 0' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 32px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '32px' }}>
           {stats.map((stat, i) => {
@@ -496,7 +520,7 @@ function TestimonialsSection() {
     { initials:'MJ', name:'Marcus J.', location:'Berlin, DE',   color:'#22c55e', rating:5, text:'Ordered the BrightPhone Pro 15 — the camera is stunning. Arrived in 2 days, perfectly packaged. Will order again!' },
   ];
   return (
-    <section style={{ background: '#111118', padding: '100px 0' }}>
+    <section className="home-section" style={{ background: '#111118', padding: '100px 0' }}>
       <div className="section-divider" style={{ marginBottom: '100px' }} />
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 32px' }}>
         <div style={{ textAlign: 'center', marginBottom: '56px' }}>
@@ -537,7 +561,7 @@ function NewsletterSection() {
   const [subscribed, setSubscribed] = useState(false);
 
   return (
-    <section style={{ background: '#0a0a0f', padding: '100px 0', position: 'relative', overflow: 'hidden' }}>
+    <section className="home-section" style={{ background: '#0a0a0f', padding: '100px 0', position: 'relative', overflow: 'hidden' }}>
       <div style={{
         position: 'absolute', top: '50%', left: '50%',
         transform: 'translate(-50%,-50%)',
@@ -555,7 +579,7 @@ function NewsletterSection() {
         </p>
         {subscribed ? (
           <div className="glass" style={{ padding: '20px 32px', borderRadius: '12px', color: '#22c55e', fontWeight: 600 }}>
-            ✓ You're in! Welcome to the BrightCart community.
+            ✓ You're in! Welcome to the Shoppercart community.
           </div>
         ) : (
           <form onSubmit={(e) => { e.preventDefault(); if (email) setSubscribed(true); }}
@@ -578,7 +602,7 @@ function NewsletterSection() {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function HomePage() {
   return (
-    <div style={{ background: '#0a0a0f' }}>
+    <div className="home-page" style={{ background: '#0a0a0f' }}>
       <HeroSection />
       <MarqueeTicker />
       <FeaturedProducts />

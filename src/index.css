@@ -25,6 +25,104 @@
   }
 }
 
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  .products-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+  }
+
+  .products-grid > .glass {
+    min-width: 0;
+    padding: 12px !important;
+    gap: 10px !important;
+  }
+
+  .products-grid .product-img-wrap {
+    height: 132px !important;
+  }
+
+  .products-grid h3 {
+    font-size: 13px !important;
+    overflow-wrap: anywhere;
+  }
+
+  .product-detail-page__content {
+    padding: 28px 16px !important;
+  }
+
+  .product-detail-layout {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 24px !important;
+    margin-bottom: 40px !important;
+  }
+
+  .product-detail-layout > div:first-child > .glass {
+    min-height: 270px !important;
+    padding: 16px !important;
+    border-radius: 16px !important;
+  }
+
+  .product-detail-guarantees {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+
+  .product-detail-actions > button {
+    flex: 1 1 0;
+    min-width: 0;
+    justify-content: center;
+  }
+
+  .checkout-layout {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 20px !important;
+  }
+
+  .checkout-layout > .glass {
+    min-width: 0;
+    padding: 20px !important;
+  }
+
+  .checkout-fields--two,
+  .checkout-fields--three {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px !important;
+  }
+
+  .checkout-progress {
+    gap: 8px !important;
+    margin: 24px 0 !important;
+  }
+
+  .checkout-progress > div {
+    gap: 8px !important;
+  }
+
+  .checkout-progress > div > div:last-child {
+    width: 16px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .products-grid {
+    gap: 8px !important;
+  }
+
+  .products-grid > .glass {
+    padding: 10px !important;
+  }
+
+  .products-grid .product-img-wrap {
+    height: 116px !important;
+  }
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #0a0a0f; }

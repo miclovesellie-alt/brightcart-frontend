@@ -229,7 +229,7 @@ export default function AccountPage() {
 
         {/* Center: login/register modal */}
         <div style={{ width: '100%', maxWidth: '420px', flexShrink: 0 }}>
-          {/* BrightCart branding above modal */}
+          {/* Shoppercart branding above modal */}
           <div style={{ textAlign: 'center', marginBottom: '20px' }}>
             <div style={{
               display: 'inline-flex',
@@ -242,7 +242,7 @@ export default function AccountPage() {
               marginBottom: '8px',
             }}>
               <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4f8ef7', boxShadow: '0 0 6px #4f8ef7' }} />
-              <span style={{ fontSize: '12px', color: '#4f8ef7', fontWeight: 600, letterSpacing: '0.08em' }}>BRIGHTCART STORE</span>
+              <span style={{ fontSize: '12px', color: '#4f8ef7', fontWeight: 600, letterSpacing: '0.08em' }}>SHOPPERCART STORE</span>
             </div>
           </div>
 
@@ -292,7 +292,7 @@ export default function AccountPage() {
                 {tab === 'login' ? 'Welcome Back' : 'Create Account'}
               </h1>
               <p style={{ fontSize: '13px', color: '#8892a4', marginTop: '4px' }}>
-                {tab === 'login' ? 'Sign in to your BrightCart account' : 'Join thousands of happy shoppers'}
+                {tab === 'login' ? 'Sign in to your Shoppercart account' : 'Join thousands of happy shoppers'}
               </p>
             </div>
 
@@ -415,7 +415,7 @@ export default function AccountPage() {
           }}
         >
           <h2 style={{ fontSize: '26px', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', margin: 0, lineHeight: 1.2 }}>
-            BrightCart.
+            Shoppercart.
           </h2>
           <p style={{ fontSize: '14px', lineHeight: 1.6, color: '#94a3b8', margin: 0 }}>
             Phones, laptops, accessories, and home tech delivered straight from verified makers.

@@ -322,7 +322,7 @@ export default function AIDropshipping() {
     <div className="ds-page">
       <header className="ds-page-head">
         <div>
-          <div className="ds-eyebrow"><Sparkles size={13} /> BRIGHTCART WORKSPACE</div>
+          <div className="ds-eyebrow"><Sparkles size={13} /> SHOPPERCART WORKSPACE</div>
           <h1>AI Dropshipping</h1>
           <p>Research, review, price, and publish products from one controlled workspace.</p>
         </div>

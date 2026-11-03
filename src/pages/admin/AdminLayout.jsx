@@ -51,7 +51,7 @@ export default function AdminLayout({ children, activePage }) {
             <Zap size={16} color="#fff" />
           </div>
           <div>
-            <div style={{ fontWeight:800, color:'#fff', fontSize:14, letterSpacing:'-0.02em' }}>BRIGHTCART</div>
+            <div style={{ fontWeight:800, color:'#fff', fontSize:14, letterSpacing:'-0.02em' }}>SHOPPERCART</div>
             <div style={{ fontSize:10, color:'#475569', letterSpacing:'0.06em' }}>ADMIN PANEL</div>
           </div>
         </div>
@@ -137,7 +137,7 @@ export default function AdminLayout({ children, activePage }) {
             <div style={{ fontWeight:700, fontSize:15, color:'#0f172a' }}>
               {ALL_NAV.find(n => n.page === activePage)?.label || 'Admin'}
             </div>
-            <div style={{ fontSize:11, color:'#94a3b8' }}>BrightCart · Dropshipping Dashboard</div>
+            <div style={{ fontSize:11, color:'#94a3b8' }}>Shoppercart · Dropshipping Dashboard</div>
           </div>
 
           {/* Search */}

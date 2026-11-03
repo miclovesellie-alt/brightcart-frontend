@@ -1,8 +1,11 @@
 import { getSessionToken, destroySessionToken } from './security';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : '')).replace(/\/$/, '');
 
 async function request(path, options = {}) {
+  if (!API_BASE) {
+    throw new Error('Shoppercart API is not configured. Set VITE_API_URL to the deployed backend API URL.');
+  }
   const { auth = true, ...init } = options;
   const headers = new Headers(init.headers || {});
   if (init.body && !(init.body instanceof FormData)) headers.set('Content-Type', 'application/json');
@@ -13,7 +16,7 @@ async function request(path, options = {}) {
   try {
     response = await fetch(`${API_BASE}${path}`, { ...init, headers });
   } catch (error) {
-    throw new Error(`Cannot reach the BrightCart API. Check VITE_API_URL and the backend status. ${error.message}`);
+    throw new Error(`Cannot reach the Shoppercart API. Check VITE_API_URL and the backend status. ${error.message}`);
   }
 
   let payload = {};

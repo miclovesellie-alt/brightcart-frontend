@@ -87,7 +87,7 @@ export default function Navbar() {
         >
           <Zap size={18} color="#4f8ef7" fill="#4f8ef7" />
           <span style={{ color: '#fff', fontSize: '18px', fontWeight: 800, letterSpacing: '-0.5px' }}>
-            BrightCart
+            Shoppercart
           </span>
           <span style={{
             width: '6px', height: '6px',

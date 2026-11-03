@@ -46,12 +46,12 @@ export default function ProductDetailPage() {
   const [added, setAdded] = useState(false);
   const [wishlisted, setWishlisted] = useState(false);
 
-  const related = products
+  const related = product ? products
     .filter(p => p.category === product.category && p.id !== product.id)
-    .slice(0, 4);
+    .slice(0, 4) : [];
 
-  const specs = TECH_SPECS[product.category] || TECH_SPECS.phones;
-  const discount = product.originalPrice
+  const specs = product ? TECH_SPECS[product.category] || TECH_SPECS.phones : [];
+  const discount = product?.originalPrice
     ? Math.round((1 - product.price / product.originalPrice) * 100)
     : null;
 
@@ -61,9 +61,19 @@ export default function ProductDetailPage() {
     setTimeout(() => setAdded(false), 2000);
   };
 
+  if (!product) {
+    return (
+      <div style={{ minHeight: '70vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', background: '#0a0a0f', color: '#8892a4', padding: '100px 20px 40px', textAlign: 'center' }}>
+        <h1 style={{ color: '#fff', fontSize: '24px' }}>Product unavailable</h1>
+        <p>This product is no longer in the catalog.</p>
+        <button onClick={() => navigate('products')} className="btn-primary">Browse Products</button>
+      </div>
+    );
+  }
+
   return (
     <div style={{ background: '#0a0a0f', minHeight: '100vh', paddingTop: '80px' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 32px' }}>
+      <div className="product-detail-page__content" style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 32px' }}>
 
         {/* Back button */}
         <button
@@ -88,7 +98,7 @@ export default function ProductDetailPage() {
         </button>
 
         {/* Main Layout */}
-        <div style={{
+        <div className="product-detail-layout" style={{
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',
           gap: '64px',
@@ -114,7 +124,7 @@ export default function ProductDetailPage() {
             </div>
 
             {/* Guarantees */}
-            <div style={{
+            <div className="product-detail-guarantees" style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(4, 1fr)',
               gap: '12px',
@@ -251,7 +261,7 @@ export default function ProductDetailPage() {
             </div>
 
             {/* CTA buttons */}
-            <div style={{ display: 'flex', gap: '12px' }}>
+            <div className="product-detail-actions" style={{ display: 'flex', gap: '12px' }}>
               <button
                 onClick={handleAddToCart}
                 className="btn-primary"

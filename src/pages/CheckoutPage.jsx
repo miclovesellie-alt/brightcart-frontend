@@ -173,7 +173,7 @@ export default function CheckoutPage() {
       <div style={{ maxWidth: '1080px', margin: '0 auto', padding: '0 24px' }}>
         
         {/* Progress Steps */}
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '32px', margin: '40px 0' }}>
+        <div className="checkout-progress" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '32px', margin: '40px 0' }}>
           {STEPS.map((s, idx) => {
             const Icon = s.icon;
             const isDone = step > s.id;
@@ -203,7 +203,7 @@ export default function CheckoutPage() {
           })}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '32px', alignItems: 'start' }}>
+        <div className="checkout-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '32px', alignItems: 'start' }}>
 
           {checkoutError && (
             <div role="alert" style={{ gridColumn: '1 / -1', padding: '12px 16px', borderRadius: 10, color: '#fecaca', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', fontSize: 13 }}>
@@ -219,7 +219,7 @@ export default function CheckoutPage() {
               <div>
                 <h2 style={{ fontWeight: 800, fontSize: '20px', color: '#fff', marginBottom: '24px' }}>Delivery & Contact Information</h2>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div className="checkout-fields--two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: '#8892a4', marginBottom: '6px' }}>Full Name *</label>
                       <input type="text" name="name" value={shipping.name} onChange={updateShipping} placeholder="Kwame Mensah" style={fieldStyle} required />
@@ -240,7 +240,7 @@ export default function CheckoutPage() {
                     <input type="text" name="address" value={shipping.address} onChange={updateShipping} placeholder="14 Independence Ave, Airport Residential" style={fieldStyle} required />
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+                  <div className="checkout-fields--three" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, color: '#8892a4', marginBottom: '6px' }}>City *</label>
                       <input type="text" name="city" value={shipping.city} onChange={updateShipping} placeholder="Accra" style={fieldStyle} />

@@ -14,7 +14,7 @@ export default function AdminSettings() {
   const [saved, setSaved] = useState(false);
 
   const [store, setStore] = useState({
-    name:'BrightCart Store', email:'admin@brightcart.store', phone:'+1 (555) 000-1234',
+    name:'Shoppercart Store', email:'admin@shoppercart.uhcacadamy.com', phone:'+1 (555) 000-1234',
     currency:'USD', language:'English', timezone:'UTC-5 (Eastern)',
     logo:'⚡', tagline:'Premium Tech Delivered', address:'123 Commerce St, New York, NY 10001',
   });
@@ -27,15 +27,15 @@ export default function AdminSettings() {
 
   const [payment, setPayment] = useState({
     stripe:true, paypal:true, applePay:false, googlePay:false,
-    stripeKey:'sk_live_*****', paypalEmail:'payments@brightcart.store',
+    stripeKey:'sk_live_*****', paypalEmail:'payments@shoppercart.uhcacadamy.com',
     taxRate:'8', autoInvoice:true,
   });
 
   const [email, setEmail] = useState({
-    fromName:'BrightCart', fromEmail:'hello@brightcart.store',
+    fromName:'Shoppercart', fromEmail:'hello@shoppercart.uhcacadamy.com',
     orderConfirm:true, shipNotify:true, deliveryConfirm:true,
     reviewRequest:true, abandonedCart:true,
-    footerText:'BrightCart Store · Premium Tech Delivered',
+    footerText:'Shoppercart Store · Premium Tech Delivered',
   });
 
   const handleSave = () => {

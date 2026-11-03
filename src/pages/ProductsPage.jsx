@@ -325,7 +325,7 @@ export default function ProductsPage() {
 
         {/* Grid */}
         {loading ? (
-          <div style={{
+          <div className="products-grid" style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
             gap: '24px',
@@ -340,7 +340,7 @@ export default function ProductsPage() {
                 <p style={{ fontSize: '16px' }}>No products found matching your search.</p>
               </div>
             ) : (
-              <div style={{
+              <div className="products-grid" style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
                 gap: '24px',

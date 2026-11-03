@@ -1,11 +1,11 @@
-# BrightCart Storefront
+# Shoppercart Storefront
 
 React and Vite storefront with a role-gated admin area, customer accounts, checkout, and an integrated dropshipping workspace.
 
 ## Run locally
 
-1. Start the [BrightCart backend](https://github.com/miclovesellie-alt/brightcart-backend#brightcart-backend) and configure its `.env` file.
-2. Copy `.env.example` to `.env`. Set `VITE_API_URL` if the backend is not at `http://localhost:5000/api`.
+1. Start the [Shoppercart backend API](https://github.com/miclovesellie-alt/brightcart-backend) and configure its `.env` file.
+2. Copy `.env.example` to `.env`. Local development defaults to `http://localhost:5000/api`; production must set `VITE_API_URL` to the deployed backend's `/api` URL.
 3. Optionally set the Paystack **public** key from your own Paystack account. Leave it blank to disable Paystack checkout; never put a Paystack secret key in a `VITE_` variable.
 4. Install dependencies and run Vite:
 
