@@ -4,33 +4,6 @@ import { useCurrency } from '../context/CurrencyContext';
 import ProductImageGallery from '../components/ProductImageGallery';
 import { Star, ShoppingCart, Heart, ArrowLeft, Shield, Truck, RefreshCw, Package } from 'lucide-react';
 
-const TECH_SPECS = {
-  phones: [
-    { label: 'Display', value: '6.7" AMOLED' },
-    { label: 'Processor', value: 'Snapdragon 8 Gen 3' },
-    { label: 'Camera', value: '200MP Triple' },
-    { label: 'Battery', value: '5000mAh' },
-  ],
-  'phone-accessories': [
-    { label: 'Connectivity', value: 'Bluetooth 5.3' },
-    { label: 'Battery', value: '36hr total' },
-    { label: 'Driver', value: '10mm dynamic' },
-    { label: 'Warranty', value: '1 year' },
-  ],
-  'laptop-accessories': [
-    { label: 'Interface', value: 'USB-C 3.2' },
-    { label: 'Output', value: '4K@60Hz' },
-    { label: 'Power', value: '100W PD' },
-    { label: 'Ports', value: '12-in-1' },
-  ],
-  electrical: [
-    { label: 'Power', value: '2500W max' },
-    { label: 'Surge', value: '1800J protect' },
-    { label: 'Outlets', value: '4 AC + 4 USB' },
-    { label: 'Warranty', value: '2 years' },
-  ],
-};
-
 const GUARANTEES = [
   { icon: Shield, label: 'Secure Payment' },
   { icon: Truck, label: 'Fast Shipping' },
@@ -50,7 +23,9 @@ export default function ProductDetailPage() {
     .filter(p => p.category === product.category && p.id !== product.id)
     .slice(0, 4) : [];
 
-  const specs = product ? TECH_SPECS[product.category] || TECH_SPECS.phones : [];
+  const specs = Array.isArray(product?.specifications)
+    ? product.specifications.filter(spec => spec && typeof spec.label === 'string' && typeof spec.value === 'string')
+    : [];
   const discount = product?.originalPrice
     ? Math.round((1 - product.price / product.originalPrice) * 100)
     : null;
@@ -291,8 +266,8 @@ export default function ProductDetailPage() {
           </div>
         </div>
 
-        {/* Tech Specs */}
-        <div style={{ marginBottom: '80px' }}>
+        {specs.length > 0 && (
+          <div style={{ marginBottom: '80px' }}>
           <h2 style={{ fontSize: '24px', fontWeight: 700, color: '#fff', marginBottom: '24px' }}>Tech Specifications</h2>
           <div style={{
             display: 'grid',
@@ -306,7 +281,8 @@ export default function ProductDetailPage() {
               </div>
             ))}
           </div>
-        </div>
+          </div>
+        )}
 
         {/* Related Products */}
         {related.length > 0 && (
