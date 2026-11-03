@@ -75,12 +75,19 @@ export function CurrencyProvider({ children }) {
     localStorage.setItem(PREF_KEY, code);
   }, []);
 
+  // Exchange rates are quoted against USD, which remains the catalog's storage currency.
+  const convertBetween = useCallback((amount, sourceCode = 'USD', targetCode = 'USD') => {
+    const value = Number(amount);
+    if (!Number.isFinite(value)) return 0;
+    const sourceRate = rates[sourceCode] ?? 1;
+    const targetRate = rates[targetCode] ?? 1;
+    return (value / sourceRate) * targetRate;
+  }, [rates]);
+
   // Convert an amount from USD to the selected currency
   const convert = useCallback((usdAmount, targetCode) => {
-    const code = targetCode || currency;
-    const rate = rates[code] ?? 1;
-    return usdAmount * rate;
-  }, [rates, currency]);
+    return convertBetween(usdAmount, 'USD', targetCode || currency);
+  }, [convertBetween, currency]);
 
   // Format a USD amount as a string in the selected currency
   const format = useCallback((usdAmount, targetCode) => {
@@ -109,7 +116,7 @@ export function CurrencyProvider({ children }) {
   return (
     <CurrencyContext.Provider value={{
       currency, setCurrency, rates, loading, error,
-      lastUpdated, convert, format, rateLabel, currentMeta, CURRENCIES,
+      lastUpdated, convert, convertBetween, format, rateLabel, currentMeta, CURRENCIES,
     }}>
       {children}
     </CurrencyContext.Provider>

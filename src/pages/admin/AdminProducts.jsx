@@ -15,7 +15,7 @@ const CATEGORIES = [
 
 const STATUS_OPTIONS = ['Active', 'Draft', 'Out of Stock'];
 const EMPTY_FORM = {
-  name: '', category: 'phones', price: '', originalPrice: '', cost: '', shippingCost: '0',
+  name: '', category: 'phones', currency: 'USD', price: '', originalPrice: '', cost: '', shippingCost: '0',
   stock: '', description: '', supplier: '', status: 'Active', sku: '', tag: '', featured: false, images: [''],
 };
 
@@ -47,9 +47,19 @@ function isValidImageUrl(value) {
   }
 }
 
+function amountForInput(usdAmount, currency, convert) {
+  if (usdAmount === undefined || usdAmount === null || usdAmount === '') return '';
+  return roundCurrencyAmount(convert(Number(usdAmount), currency), currency);
+}
+
+function roundCurrencyAmount(amount, currency) {
+  const decimals = ['JPY', 'KRW', 'NGN'].includes(currency) ? 0 : 2;
+  return Number(amount).toFixed(decimals);
+}
+
 export default function AdminProducts() {
   const { adminProducts: products, addProduct, updateProduct, deleteProduct } = useStore();
-  const { format } = useCurrency();
+  const { format, currency: preferredCurrency, convert, convertBetween, CURRENCIES } = useCurrency();
   const [search, setSearch] = useState('');
   const [cat, setCat] = useState('All');
   const [showModal, setShowModal] = useState(false);
@@ -70,17 +80,19 @@ export default function AdminProducts() {
     return matchCat && matchQ;
   });
 
-  const openNew = () => { setForm({ ...EMPTY_FORM, images: [''] }); setEditProduct(null); setFormError(''); setShowModal(true); };
+  const openNew = () => { setForm({ ...EMPTY_FORM, currency: preferredCurrency, images: [''] }); setEditProduct(null); setFormError(''); setShowModal(true); };
   const openEdit = product => {
     const images = getProductImages(product);
+    const entryCurrency = product.inputCurrency || 'USD';
     setForm({
       ...EMPTY_FORM,
       ...product,
+      currency: entryCurrency,
       category: product.category || 'phones',
-      price: String(product.price ?? ''),
-      originalPrice: String(product.originalPrice ?? ''),
-      cost: String(product.supplierDetails?.unitCost ?? product.cost ?? ''),
-      shippingCost: String(product.supplierDetails?.shippingCost ?? '0'),
+      price: amountForInput(product.price, entryCurrency, convert),
+      originalPrice: amountForInput(product.originalPrice, entryCurrency, convert),
+      cost: amountForInput(product.supplierDetails?.unitCost ?? product.cost, entryCurrency, convert),
+      shippingCost: amountForInput(product.supplierDetails?.shippingCost ?? 0, entryCurrency, convert),
       stock: String(product.stock ?? 0),
       sku: product.sku || '',
       tag: product.tag || '',
@@ -94,6 +106,15 @@ export default function AdminProducts() {
   const closeModal = () => { if (!saving) { setShowModal(false); setEditProduct(null); setFormError(''); } };
 
   const F = (key, value) => setForm(current => ({ ...current, [key]: value }));
+  const changeInputCurrency = nextCurrency => setForm(current => {
+    if (current.currency === nextCurrency) return current;
+    const moneyFields = ['price', 'originalPrice', 'cost', 'shippingCost'];
+    const convertedFields = Object.fromEntries(moneyFields.map(field => [
+      field,
+      current[field] === '' ? '' : roundCurrencyAmount(convertBetween(Number(current[field]), current.currency, nextCurrency), nextCurrency),
+    ]));
+    return { ...current, ...convertedFields, currency: nextCurrency };
+  });
   const updateImage = (index, value) => setForm(current => ({
     ...current,
     images: current.images.map((image, imageIndex) => imageIndex === index ? value : image),
@@ -106,18 +127,26 @@ export default function AdminProducts() {
   const handleSave = async () => {
     const name = form.name.trim();
     const category = categorySlug(form.category);
-    const price = Number(form.price);
-    const cost = Number(form.cost);
-    const shipping = Number(form.shippingCost || 0);
+    const enteredPrice = Number(form.price);
+    const enteredCost = Number(form.cost);
+    const enteredShipping = Number(form.shippingCost || 0);
+    const enteredCompareAt = form.originalPrice === '' ? null : Number(form.originalPrice);
+    const price = convertBetween(enteredPrice, form.currency, 'USD');
+    const cost = convertBetween(enteredCost, form.currency, 'USD');
+    const shipping = convertBetween(enteredShipping, form.currency, 'USD');
     const stock = Number(form.stock || 0);
     const images = [...new Set(form.images.map(value => value.trim()).filter(Boolean))];
 
-    if (!name || !category || !Number.isFinite(price) || price <= 0) {
+    if (!name || !category || !Number.isFinite(enteredPrice) || enteredPrice <= 0 || !Number.isFinite(price) || price <= 0) {
       setFormError('Add a product name, category, and selling price greater than zero.');
       return;
     }
-    if (form.cost === '' || !Number.isFinite(cost) || cost < 0 || !Number.isFinite(shipping) || shipping < 0) {
+    if (form.cost === '' || !Number.isFinite(enteredCost) || enteredCost < 0 || !Number.isFinite(enteredShipping) || enteredShipping < 0 || !Number.isFinite(cost) || !Number.isFinite(shipping)) {
       setFormError('Enter a valid supplier unit cost and shipping cost so profit can be calculated.');
+      return;
+    }
+    if (enteredCompareAt !== null && (!Number.isFinite(enteredCompareAt) || enteredCompareAt < 0)) {
+      setFormError('Compare-at price must be zero or more.');
       return;
     }
     if (!Number.isFinite(stock) || stock < 0) {
@@ -134,13 +163,15 @@ export default function AdminProducts() {
       unitCost: cost,
       shippingCost: shipping,
     };
+    const productFields = Object.fromEntries(Object.entries(form).filter(([key]) => key !== 'currency'));
     const data = {
-      ...form,
+      ...productFields,
       name,
       category,
       price,
-      originalPrice: form.originalPrice === '' ? price : Math.max(0, Number(form.originalPrice) || 0),
+      originalPrice: enteredCompareAt === null ? price : convertBetween(enteredCompareAt, form.currency, 'USD'),
       cost,
+      inputCurrency: form.currency,
       supplierDetails,
       stock: Math.floor(stock),
       images,
@@ -171,6 +202,7 @@ export default function AdminProducts() {
   const previewProfit = previewPrice - previewLandedCost;
   const previewStock = Math.max(0, Number(form.stock) || 0);
   const previewReady = form.price !== '' && previewPrice > 0 && form.cost !== '' && Number.isFinite(previewLandedCost);
+  const formatInputMoney = amount => format(convertBetween(amount, form.currency, 'USD'), form.currency);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -247,12 +279,13 @@ export default function AdminProducts() {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 14 }}>
               <div style={{ gridColumn: '1/-1' }}><label style={lbl}>PRODUCT NAME *</label><input autoFocus value={form.name} onChange={event => F('name', event.target.value)} placeholder="e.g. Wireless noise-cancelling headphones" style={inp} /></div>
+              <div style={{ gridColumn: '1/-1' }}><label style={lbl}>PRICE ENTRY CURRENCY</label><select value={form.currency} onChange={event => changeInputCurrency(event.target.value)} style={inp}>{CURRENCIES.map(item => <option key={item.code} value={item.code}>{item.flag} {item.code} · {item.name}</option>)}</select><small style={hint}>Entered prices convert to USD for the catalog, then to each shopper’s preferred currency. Changing this choice converts the amounts already entered.</small></div>
               <div><label style={lbl}>CATEGORY *</label><input list="shoppercart-product-categories" value={form.category.replace(/[-_]+/g, ' ')} onChange={event => F('category', event.target.value)} placeholder="Choose or add a category" style={inp} /><datalist id="shoppercart-product-categories">{categories.map(item => <option key={item.slug} value={item.label} />)}</datalist><small style={hint}>Choose a suggestion or type a new category.</small></div>
               <div><label style={lbl}>SKU</label><input value={form.sku} onChange={event => F('sku', event.target.value)} placeholder="Generated if left blank" style={inp} /></div>
-              <div><label style={lbl}>SELLING PRICE *</label><input type="number" min="0.01" step="0.01" value={form.price} onChange={event => F('price', event.target.value)} placeholder="129.00" style={inp} /></div>
-              <div><label style={lbl}>SUPPLIER UNIT COST *</label><input type="number" min="0" step="0.01" value={form.cost} onChange={event => F('cost', event.target.value)} placeholder="45.00" style={inp} /></div>
-              <div><label style={lbl}>INBOUND SHIPPING / UNIT</label><input type="number" min="0" step="0.01" value={form.shippingCost} onChange={event => F('shippingCost', event.target.value)} placeholder="0.00" style={inp} /></div>
-              <div><label style={lbl}>COMPARE-AT PRICE</label><input type="number" min="0" step="0.01" value={form.originalPrice} onChange={event => F('originalPrice', event.target.value)} placeholder={form.price || '159.00'} style={inp} /><small style={hint}>Optional crossed-out reference price.</small></div>
+              <div><label style={lbl}>SELLING PRICE ({form.currency}) *</label><input type="number" min="0.01" step="0.01" value={form.price} onChange={event => F('price', event.target.value)} placeholder="129.00" style={inp} /></div>
+              <div><label style={lbl}>SUPPLIER UNIT COST ({form.currency}) *</label><input type="number" min="0" step="0.01" value={form.cost} onChange={event => F('cost', event.target.value)} placeholder="45.00" style={inp} /></div>
+              <div><label style={lbl}>INBOUND SHIPPING / UNIT ({form.currency})</label><input type="number" min="0" step="0.01" value={form.shippingCost} onChange={event => F('shippingCost', event.target.value)} placeholder="0.00" style={inp} /></div>
+              <div><label style={lbl}>COMPARE-AT PRICE ({form.currency})</label><input type="number" min="0" step="0.01" value={form.originalPrice} onChange={event => F('originalPrice', event.target.value)} placeholder={form.price || '159.00'} style={inp} /><small style={hint}>Optional crossed-out reference price.</small></div>
               <div><label style={lbl}>STOCK QUANTITY</label><input type="number" min="0" step="1" value={form.stock} onChange={event => F('stock', event.target.value)} placeholder="0" style={inp} /></div>
               <div><label style={lbl}>SUPPLIER</label><input value={form.supplier} onChange={event => F('supplier', event.target.value)} placeholder="Supplier name" style={inp} /></div>
               <div><label style={lbl}>STATUS</label><select value={form.status} onChange={event => F('status', event.target.value)} style={inp}>{STATUS_OPTIONS.map(status => <option key={status}>{status}</option>)}</select></div>
@@ -273,11 +306,11 @@ export default function AdminProducts() {
               <div style={{ gridColumn: '1/-1', background: previewReady && previewProfit < 0 ? '#fff7ed' : '#f0fdf4', borderRadius: 9, padding: '12px 14px' }}>
                 <div style={{ fontSize: 10, color: '#64748b', fontWeight: 700, letterSpacing: '.04em', marginBottom: 8 }}>ESTIMATED UNIT ECONOMICS</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
-                  <Metric label="Landed unit cost" value={form.cost !== '' ? format(previewLandedCost) : '—'} />
-                  <Metric label="Profit per unit" value={previewReady ? format(previewProfit) : '—'} color={previewProfit >= 0 ? '#16a34a' : '#dc2626'} />
+                  <Metric label="Landed unit cost" value={form.cost !== '' ? formatInputMoney(previewLandedCost) : '—'} />
+                  <Metric label="Profit per unit" value={previewReady ? formatInputMoney(previewProfit) : '—'} color={previewProfit >= 0 ? '#16a34a' : '#dc2626'} />
                   <Metric label="Gross margin" value={previewReady ? `${(previewProfit / previewPrice * 100).toFixed(1)}%` : '—'} color={previewProfit >= 0 ? '#16a34a' : '#dc2626'} />
                 </div>
-                <div style={{ borderTop: '1px solid rgba(148,163,184,.25)', marginTop: 10, paddingTop: 8, fontSize: 11, color: '#475569' }}>Potential profit at current stock ({Math.floor(previewStock)}): <strong style={{ color: previewProfit >= 0 ? '#15803d' : '#b91c1c' }}>{previewReady ? format(previewProfit * previewStock) : '—'}</strong></div>
+                <div style={{ borderTop: '1px solid rgba(148,163,184,.25)', marginTop: 10, paddingTop: 8, fontSize: 11, color: '#475569' }}>Potential profit at current stock ({Math.floor(previewStock)}): <strong style={{ color: previewProfit >= 0 ? '#15803d' : '#b91c1c' }}>{previewReady ? formatInputMoney(previewProfit * previewStock) : '—'}</strong></div>
                 <small style={{ ...hint, marginTop: 4 }}>Before payment fees, store expenses, and customer delivery charges.</small>
               </div>
 
