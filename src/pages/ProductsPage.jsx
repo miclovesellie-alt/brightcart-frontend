@@ -46,6 +46,12 @@ function ProductCard({ product, onClick }) {
     electrical: { bg: 'rgba(34,197,94,0.15)', color: '#22c55e' },
   };
   const colors = categoryColors[product.category] || categoryColors.phones;
+  const tagText = typeof product.tag === 'string' ? product.tag.trim() : '';
+  const tagWithoutProtocol = tagText.replace(/^https?:\/\//i, '');
+  const tagIsUrl = /^[a-z0-9.-]+\.[a-z]{2,}(?:[/:?#]|$)/i.test(tagWithoutProtocol);
+  const tagLabel = tagIsUrl
+    ? tagWithoutProtocol.split(/[/?#]/)[0].replace(/^www\./i, '')
+    : tagText;
 
   const handleAddToCart = (e) => {
     e.stopPropagation();
@@ -80,7 +86,7 @@ function ProductCard({ product, onClick }) {
     >
       <ProductImageGallery product={product} alt={product.name} className="product-img-wrap" style={{ height: '200px', background: '#111118', borderRadius: '8px' }} imageStyle={{ padding: '12px', transition: 'transform 0.4s ease' }} />
 
-      {product.tag && (
+      {tagLabel && (
         <span style={{
           alignSelf: 'flex-start',
           padding: '3px 10px',
@@ -91,8 +97,12 @@ function ProductCard({ product, onClick }) {
           color: colors.color,
           textTransform: 'uppercase',
           letterSpacing: '0.06em',
+          maxWidth: '100%',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
         }}>
-          {product.tag}
+          {tagLabel}
         </span>
       )}
 
