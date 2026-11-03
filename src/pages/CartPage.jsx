@@ -13,8 +13,9 @@ export default function CartPage() {
 
   if (cart.length === 0) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0a0f', paddingTop: '80px' }}>
-        <div style={{ textAlign: 'center' }}>
+      <div className="cart-page cart-page--empty" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0a0f', paddingTop: '80px' }}>
+        <div style={{ textAlign: 'center', padding: '0 20px' }}>
+          <h1 className="cart-page__empty-title">Shopping Cart</h1>
           <div style={{ fontSize: '72px', marginBottom: '24px' }}>🛒</div>
           <h2 style={{ fontSize: '24px', fontWeight: 700, color: '#fff', marginBottom: '8px' }}>Your cart is empty</h2>
           <p style={{ color: '#8892a4', marginBottom: '24px' }}>Looks like you haven't added anything yet.</p>
@@ -31,54 +32,48 @@ export default function CartPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0f', paddingTop: '80px' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 32px' }}>
-        <h1 style={{ fontSize: '32px', fontWeight: 800, color: '#fff', marginBottom: '32px', letterSpacing: '-0.02em' }}>
+    <div className="cart-page" style={{ minHeight: '100vh', background: '#0a0a0f', paddingTop: '80px' }}>
+      <div className="cart-page__content" style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 32px' }}>
+        <h1 className="cart-page__title" style={{ fontSize: '32px', fontWeight: 800, color: '#fff', marginBottom: '32px', letterSpacing: '-0.02em' }}>
           Shopping Cart
           <span style={{ fontSize: '18px', fontWeight: 400, color: '#8892a4', marginLeft: '12px' }}>({cart.length} item{cart.length !== 1 ? 's' : ''})</span>
         </h1>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '32px' }}>
+        <div className="cart-page__layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: '32px' }}>
           {/* Cart Items */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="cart-page__items">
             {cart.map(item => (
-              <div key={item.product.id} className="glass" style={{
-                borderRadius: '16px',
-                padding: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '16px',
-              }}>
-                <ProductImageGallery product={item.product} alt={item.product.name} showControls={false} style={{ width: 72, height: 72, background: '#111118', borderRadius: 10, flex: '0 0 72px' }} imageStyle={{ padding: 6 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#fff', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.product.name}</h3>
-                  <p style={{ fontSize: '12px', color: '#8892a4', marginBottom: '8px', textTransform: 'capitalize' }}>{item.product.category.replace('-', ' ')}</p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontWeight: 700, color: '#4f8ef7', fontSize: '16px' }}>{format(item.product.price)}</span>
+              <div key={item.product.id} className="glass cart-page__item-card">
+                <ProductImageGallery
+                  product={item.product}
+                  alt={item.product.name}
+                  showControls={false}
+                  className="cart-page__item-image"
+                  style={{ width: 72, height: 72, background: '#111118', borderRadius: 10, flex: '0 0 72px', overflow: 'hidden' }}
+                  imageStyle={{ padding: 6 }}
+                />
+                <div className="cart-page__item-details">
+                  <h3 className="cart-page__item-name">{item.product.name}</h3>
+                  <p className="cart-page__item-category">{item.product.category.replace('-', ' ')}</p>
+                  <div className="cart-page__item-pricing">
+                    <span>{format(item.product.price)}</span>
                     {item.product.originalPrice > item.product.price && (
-                      <span style={{ fontSize: '13px', textDecoration: 'line-through', color: '#4a5568' }}>{format(item.product.originalPrice)}</span>
+                      <span className="cart-page__item-original">{format(item.product.originalPrice)}</span>
                     )}
                   </div>
                 </div>
-                {/* Qty controls */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '8px',
-                  overflow: 'hidden',
-                  flexShrink: 0,
-                }}>
-                  <button onClick={() => updateQty(item.product.id, item.qty - 1)} style={{ width: '32px', height: '32px', background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '16px' }}>−</button>
-                  <span style={{ width: '32px', textAlign: 'center', color: '#fff', fontWeight: 600, fontSize: '14px' }}>{item.qty}</span>
-                  <button onClick={() => updateQty(item.product.id, item.qty + 1)} style={{ width: '32px', height: '32px', background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '16px' }}>+</button>
-                </div>
-                <div style={{ flexShrink: 0, textAlign: 'right', minWidth: '70px' }}>
-                  <div style={{ fontWeight: 700, fontSize: '14px', color: '#fff', marginBottom: '8px' }}>{format(item.product.price * item.qty)}</div>
-                  <button onClick={() => removeFromCart(item.product.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                    <Trash2 size={15} />
-                  </button>
+                <div className="cart-page__item-actions">
+                  <div className="cart-page__quantity" aria-label="Quantity controls">
+                    <button type="button" aria-label={`Decrease ${item.product.name} quantity`} onClick={() => updateQty(item.product.id, item.qty - 1)}>−</button>
+                    <span>{item.qty}</span>
+                    <button type="button" aria-label={`Increase ${item.product.name} quantity`} onClick={() => updateQty(item.product.id, item.qty + 1)}>+</button>
+                  </div>
+                  <div className="cart-page__item-total">
+                    <span>{format(item.product.price * item.qty)}</span>
+                    <button type="button" aria-label={`Remove ${item.product.name} from cart`} onClick={() => removeFromCart(item.product.id)}>
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -86,7 +81,7 @@ export default function CartPage() {
 
           {/* Order Summary */}
           <div>
-            <div className="glass" style={{ borderRadius: '16px', padding: '24px', position: 'sticky', top: '80px' }}>
+            <div className="glass cart-page__summary" style={{ borderRadius: '16px', padding: '24px', position: 'sticky', top: '80px' }}>
               <h2 style={{ fontWeight: 700, fontSize: '18px', color: '#fff', marginBottom: '20px' }}>Order Summary</h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#8892a4' }}>
@@ -129,13 +124,6 @@ export default function CartPage() {
         </div>
       </div>
 
-      <style>{`
-        @media (max-width: 900px) {
-          div[style*="grid-template-columns: 1fr 360px"] {
-            grid-template-columns: 1fr !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }

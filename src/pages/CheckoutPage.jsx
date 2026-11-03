@@ -158,8 +158,9 @@ export default function CheckoutPage() {
 
   if (cart.length === 0) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0a0f', paddingTop: '80px' }}>
+      <div className="checkout-page checkout-page--empty" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0a0f', paddingTop: '80px' }}>
         <div style={{ textAlign: 'center' }}>
+          <h1 className="checkout-page__empty-title">Checkout</h1>
           <p style={{ fontSize: '40px', marginBottom: '16px' }}>🛒</p>
           <h2 style={{ color: '#fff', fontWeight: 700, marginBottom: '8px' }}>Your cart is empty</h2>
           <p style={{ color: '#8892a4', marginBottom: '24px' }}>Add some premium items before checking out</p>
@@ -170,8 +171,9 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0f', paddingTop: '80px', paddingBottom: '80px' }}>
-      <div style={{ maxWidth: '1080px', margin: '0 auto', padding: '0 24px' }}>
+    <div className="checkout-page" style={{ minHeight: '100vh', background: '#0a0a0f', paddingTop: '80px', paddingBottom: '80px' }}>
+      <div className="checkout-page__content" style={{ maxWidth: '1080px', margin: '0 auto', padding: '0 24px' }}>
+        <h1 className="checkout-page__title">Checkout</h1>
         
         {/* Progress Steps */}
         <div className="checkout-progress" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '32px', margin: '40px 0' }}>
@@ -213,7 +215,7 @@ export default function CheckoutPage() {
           )}
           
           {/* Main Form Body */}
-          <div className="glass" style={{ borderRadius: '20px', padding: '32px' }}>
+          <div className="glass checkout-page__form-card" style={{ borderRadius: '20px', padding: '32px' }}>
             
             {/* Step 1: Shipping Details */}
             {step === 1 && (
@@ -455,7 +457,7 @@ export default function CheckoutPage() {
 
           {/* Sidebar Summary */}
           <div>
-            <div className="glass" style={{ borderRadius: '20px', padding: '24px', position: 'sticky', top: '100px' }}>
+            <div className="glass checkout-page__summary-card" style={{ borderRadius: '20px', padding: '24px', position: 'sticky', top: '100px' }}>
               <h3 style={{ fontWeight: 800, color: '#fff', fontSize: '16px', marginBottom: '16px' }}>Summary</h3>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px', fontSize: '13px' }}>

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getProductImages } from '../utils/productImages';
 import ProductImageFallback from './ProductImageFallback';
@@ -11,6 +11,7 @@ export default function ProductImageGallery({
   imageStyle = {},
   showControls = true,
   label,
+  scrollable = true,
 }) {
   const images = getProductImages(product);
   const trackRef = useRef(null);
@@ -18,10 +19,18 @@ export default function ProductImageGallery({
   const justSwiped = useRef(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [failedImages, setFailedImages] = useState({});
+  const imageKey = images.join('|');
+
+  useEffect(() => {
+    setActiveIndex(0);
+    trackRef.current?.scrollTo({ left: 0 });
+  }, [imageKey]);
 
   const goTo = index => {
     const nextIndex = Math.max(0, Math.min(images.length - 1, index));
-    trackRef.current?.scrollTo({ left: nextIndex * trackRef.current.clientWidth, behavior: 'smooth' });
+    if (scrollable) {
+      trackRef.current?.scrollTo({ left: nextIndex * trackRef.current.clientWidth, behavior: 'smooth' });
+    }
     setActiveIndex(nextIndex);
   };
 
@@ -42,7 +51,7 @@ export default function ProductImageGallery({
 
   const onScroll = () => {
     const track = trackRef.current;
-    if (track) setActiveIndex(Math.round(track.scrollLeft / Math.max(track.clientWidth, 1)));
+    if (scrollable && track) setActiveIndex(Math.round(track.scrollLeft / Math.max(track.clientWidth, 1)));
   };
 
   return (
@@ -50,20 +59,20 @@ export default function ProductImageGallery({
       className={className}
       style={{ position: 'relative', overflow: 'hidden', ...style }}
       onClick={stopCardClickAfterSwipe}
-      onTouchStart={event => { touchStartX.current = event.touches[0].clientX; }}
-      onTouchEnd={onTouchEnd}
+      onTouchStart={scrollable ? event => { touchStartX.current = event.touches[0].clientX; } : undefined}
+      onTouchEnd={scrollable ? onTouchEnd : undefined}
     >
       {images.length ? (
         <div
           ref={trackRef}
-          onScroll={onScroll}
+          onScroll={scrollable ? onScroll : undefined}
           style={{
-            width: '100%', height: '100%', display: 'flex', overflowX: images.length > 1 ? 'auto' : 'hidden',
-            scrollSnapType: 'x mandatory', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch',
+            width: '100%', height: '100%', display: 'flex', overflowX: scrollable && images.length > 1 ? 'auto' : 'hidden',
+            overflowY: 'hidden', scrollSnapType: scrollable ? 'x mandatory' : 'none', scrollbarWidth: 'none', WebkitOverflowScrolling: scrollable ? 'touch' : 'auto',
           }}
         >
           {images.map((src, index) => (
-            <div key={`${src}-${index}`} style={{ flex: '0 0 100%', width: '100%', height: '100%', scrollSnapAlign: 'start', display: 'grid', placeItems: 'center' }}>
+            <div key={`${src}-${index}`} style={{ flex: '0 0 100%', width: '100%', height: '100%', scrollSnapAlign: 'start', display: scrollable || index === activeIndex ? 'grid' : 'none', placeItems: 'center' }}>
               {failedImages[src] ? (
                 <ProductImageFallback label={label || `No image available for ${alt || product?.name || 'product'}`} />
               ) : (

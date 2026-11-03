@@ -81,7 +81,7 @@ export default function ProductDetailPage() {
         }}>
           {/* LEFT: Image */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <div className="glass" style={{
+            <div className="glass product-detail-image-frame" style={{
               borderRadius: '20px',
               padding: '32px',
               display: 'flex',
@@ -90,7 +90,7 @@ export default function ProductDetailPage() {
               minHeight: '360px',
               overflow: 'hidden',
             }}>
-              <ProductImageGallery product={product} alt={product.name} style={{ width: '100%', height: 300, flex: '0 0 auto', borderRadius: 10 }} imageStyle={{ padding: 0 }} />
+              <ProductImageGallery product={product} alt={product.name} className="product-detail-page__gallery" scrollable={false} style={{ width: '100%', height: 300, flex: '0 0 auto', borderRadius: 10, overflow: 'hidden' }} imageStyle={{ padding: 0 }} />
             </div>
 
             {/* Guarantees */}
@@ -134,7 +134,7 @@ export default function ProductDetailPage() {
             </span>
 
             {/* Name */}
-            <h1 style={{
+            <h1 className="product-detail-page__title" style={{
               fontSize: 'clamp(24px, 3vw, 40px)',
               fontWeight: 800,
               color: '#fff',
@@ -324,7 +324,7 @@ export default function ProductDetailPage() {
                     overflow: 'hidden',
                     flexShrink: 0,
                   }}>
-                    <ProductImageGallery product={p} alt={p.name} showControls={false} style={{ width: '100%', height: '100%' }} imageStyle={{ padding: 4 }} />
+                    <ProductImageGallery product={p} alt={p.name} showControls={false} scrollable={false} style={{ width: '100%', height: '100%', overflow: 'hidden' }} imageStyle={{ padding: 4 }} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontSize: '13px', fontWeight: 600, color: '#fff', lineHeight: 1.3, marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</p>

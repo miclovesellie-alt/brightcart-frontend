@@ -66,11 +66,12 @@ export default function AccountPage() {
   // ── Logged-in profile view ──────────────────────────────────────────────────
   if (user) {
     return (
-      <div style={{ minHeight: '100vh', background: '#0a0a0f', paddingTop: '80px' }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 32px' }}>
+      <div className="account-page account-page--profile" style={{ minHeight: '100vh', background: '#0a0a0f', paddingTop: '80px' }}>
+        <div className="account-page__content" style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 32px' }}>
+          <h1 className="account-page__title">My Profile</h1>
           {/* Profile Card */}
-          <div className="glass" style={{ borderRadius: '16px', padding: '24px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <div style={{
+          <div className="glass account-page__profile-card" style={{ borderRadius: '16px', padding: '24px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <div className="account-page__avatar" style={{
               width: '64px', height: '64px', borderRadius: '50%',
               background: '#4f8ef7',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -78,7 +79,7 @@ export default function AccountPage() {
             }}>
               {user.name.charAt(0).toUpperCase()}
             </div>
-            <div style={{ flex: 1 }}>
+            <div className="account-page__profile-copy" style={{ flex: 1, minWidth: 0 }}>
               <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#fff', marginBottom: '4px' }}>{user.name}</h2>
               <p style={{ fontSize: '14px', color: '#8892a4' }}>{user.email}</p>
               {(user.phone || user.country) && (
@@ -146,12 +147,14 @@ export default function AccountPage() {
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
                       {order.items.map(item => (
-                        <div key={item.product.id} style={{
-                          width: '40px', height: '40px',
+                        <div key={item.product.id} className="account-page__order-thumb" style={{
+                          width: '40px', height: '40px', minWidth: '40px', minHeight: '40px',
                           background: '#111118',
                           borderRadius: '8px',
+                          overflow: 'hidden',
+                          flex: '0 0 40px',
                         }}>
-                          <ProductImageGallery product={item.product} alt={item.product.name} showControls={false} style={{ width: '100%', height: '100%', borderRadius: 8 }} imageStyle={{ padding: 4 }} />
+                          <ProductImageGallery product={item.product} alt={item.product.name} showControls={false} className="account-page__order-gallery" style={{ width: '40px', height: '40px', maxWidth: '40px', maxHeight: '40px', borderRadius: 8, overflow: 'hidden' }} imageStyle={{ padding: 4 }} />
                         </div>
                       ))}
                     </div>
