@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useMemo, useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { useCurrency } from '../context/CurrencyContext';
 import { formatCategory, isStorefrontProduct } from '../utils/catalog';
@@ -7,10 +7,30 @@ import ImageAssembler from '../components/ImageAssembler';
 import ProductImageGallery from '../components/ProductImageGallery';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { ChevronDown, Star, ShoppingCart, ArrowRight, Package, Truck, Shield, Headphones } from 'lucide-react';
+import { ChevronDown, Star, ShoppingCart, ArrowRight, Package, Truck, Headphones } from 'lucide-react';
 import './HomePage.css';
 
 gsap.registerPlugin(ScrollTrigger);
+
+const FEATURED_ROTATION_SEED = (() => {
+  try {
+    const value = new Uint32Array(1);
+    globalThis.crypto?.getRandomValues(value);
+    if (value[0]) return value[0];
+  } catch {}
+  return (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
+})();
+
+function shuffleForPage(items) {
+  const shuffled = [...items];
+  let state = FEATURED_ROTATION_SEED;
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    const target = state % (index + 1);
+    [shuffled[index], shuffled[target]] = [shuffled[target], shuffled[index]];
+  }
+  return shuffled;
+}
 
 // ─── Section: Hero ────────────────────────────────────────────────────────────
 function HeroSection() {
@@ -324,7 +344,13 @@ function ProductCard({ product, onClick }) {
 function FeaturedProducts() {
   const { products, catalogLoading, navigate } = useStore();
   const cardRefs = useRef([]);
-  const featured = products.filter(p => isStorefrontProduct(p) && p.featured).slice(0, 5);
+  const featured = useMemo(() => shuffleForPage(
+    products.filter(product => isStorefrontProduct(product) && product.featured)
+  ).slice(0, 10), [products]);
+  const featuredColumns = [];
+  for (let index = 0; index < featured.length; index += 2) {
+    featuredColumns.push(featured.slice(index, index + 2).map((product, row) => ({ product, index: index + row })));
+  }
 
   const featuredIds = featured.map(product => product.id).join('|');
 
@@ -369,14 +395,18 @@ function FeaturedProducts() {
             <h2 style={{ fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>Featured Products</h2>
           </div>
           <div className="home-featured-carousel">
-            {[0, 1, 2].map(item => (
-              <div key={item} className="home-featured-slide glass" aria-hidden="true">
-                <div className="skeleton" style={{ height: 150, borderRadius: 8 }} />
-                <div className="skeleton" style={{ width: 86, height: 18, borderRadius: 20 }} />
-                <div className="skeleton" style={{ width: '85%', height: 38 }} />
-                <div className="skeleton" style={{ width: '55%', height: 16 }} />
-                <div className="skeleton" style={{ width: '68%', height: 24 }} />
-                <div className="skeleton" style={{ width: '100%', height: 36, borderRadius: 8 }} />
+            {[0, 1].map(column => (
+              <div key={column} className="home-featured-column" aria-hidden="true">
+                {[0, 1].map(item => (
+                  <div key={item} className="home-featured-slide glass">
+                    <div className="skeleton" style={{ height: 150, borderRadius: 8 }} />
+                    <div className="skeleton" style={{ width: 86, height: 18, borderRadius: 20 }} />
+                    <div className="skeleton" style={{ width: '85%', height: 38 }} />
+                    <div className="skeleton" style={{ width: '55%', height: 16 }} />
+                    <div className="skeleton" style={{ width: '68%', height: 24 }} />
+                    <div className="skeleton" style={{ width: '100%', height: 36, borderRadius: 8 }} />
+                  </div>
+                ))}
               </div>
             ))}
           </div>
@@ -392,14 +422,18 @@ function FeaturedProducts() {
           <h2 style={{ fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>Featured Products</h2>
         </div>
         <div className="home-featured-carousel">
-          {featured.map((product, i) => (
-            <div
-              className="home-featured-slide"
-              key={product.id}
-              ref={(el) => { cardRefs.current[i] = el; }}
-              style={{ opacity: 0, transform: 'translateY(40px)', transition: 'opacity 0.6s ease, transform 0.6s ease' }}
-            >
-              <ProductCard product={product} onClick={() => navigate('product-detail', { productId: product.id })} />
+          {featuredColumns.map(column => (
+            <div className={`home-featured-column${column.length === 1 ? ' home-featured-column--single' : ''}`} key={column[0].product.id}>
+              {column.map(({ product, index }) => (
+                <div
+                  className="home-featured-slide"
+                  key={product.id}
+                  ref={element => { cardRefs.current[index] = element; }}
+                  style={{ opacity: 0, transform: 'translateY(40px)', transition: 'opacity 0.6s ease, transform 0.6s ease' }}
+                >
+                  <ProductCard product={product} onClick={() => navigate('product-detail', { productId: product.id })} />
+                </div>
+              ))}
             </div>
           ))}
         </div>
