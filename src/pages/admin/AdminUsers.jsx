@@ -172,7 +172,7 @@ export default function AdminUsers() {
           style={{
             display: 'flex', alignItems: 'center', gap: 8,
             padding: '10px 18px', borderRadius: 10, border: 'none', cursor: 'pointer',
-            background: 'linear-gradient(135deg,#2563eb,#7c3aed)', color: '#fff',
+            background: 'linear-gradient(135deg,#f97316,#c2410c)', color: '#fff',
             fontWeight: 700, fontSize: 13,
           }}
         >
@@ -282,7 +282,7 @@ export default function AdminUsers() {
                                 onClick={() => { setShowPwdFor(admin); setMenuFor(null); }}
                                 style={{ width: '100%', padding: '9px 14px', display: 'flex', alignItems: 'center', gap: 8, border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, color: '#374151', textAlign: 'left' }}
                               >
-                                <Lock size={13} color="#2563eb" /> Change Password
+                                <Lock size={13} color="#c2410c" /> Change Password
                               </button>
                               <button
                                 onClick={() => handleToggleStatus(admin)}
@@ -390,7 +390,7 @@ export default function AdminUsers() {
               <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151', marginBottom: 5, letterSpacing: '0.04em' }}>ROLE</label>
               <div style={{ display: 'flex', gap: 10 }}>
                 {[
-                  { value: 'admin', label: 'Admin', sub: 'Full access except Team & Settings', icon: Shield, color: '#2563eb', bg: '#eff6ff' },
+                  { value: 'admin', label: 'Admin', sub: 'Full access except Team & Settings', icon: Shield, color: '#c2410c', bg: '#fff7ed' },
                   { value: 'moderator', label: 'Moderator', sub: 'View orders & customers only', icon: Eye, color: '#059669', bg: '#f0fdf4' },
                 ].map(({ value, label, sub, icon: Icon, color, bg }) => (
                   <div
@@ -415,7 +415,7 @@ export default function AdminUsers() {
 
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => { setShowAdd(false); setAddErrors({}); }} style={{ flex: 1, padding: '10px', borderRadius: 9, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#64748b' }}>Cancel</button>
-              <button onClick={handleAdd} style={{ flex: 1, padding: '10px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#2563eb,#7c3aed)', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: '#fff' }}>Add Member</button>
+              <button onClick={handleAdd} style={{ flex: 1, padding: '10px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#f97316,#c2410c)', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: '#fff' }}>Add Member</button>
             </div>
           </div>
         </div>
@@ -426,7 +426,7 @@ export default function AdminUsers() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 400, padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-              <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg,#2563eb,#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg,#f97316,#c2410c)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Lock size={20} color="#fff" />
               </div>
               <div>
@@ -463,7 +463,7 @@ export default function AdminUsers() {
 
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => { setShowPwdFor(null); setPwdErrors({}); }} style={{ flex: 1, padding: '10px', borderRadius: 9, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#64748b' }}>Cancel</button>
-              <button onClick={handleChangePassword} style={{ flex: 1, padding: '10px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#2563eb,#7c3aed)', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: '#fff' }}>Update Password</button>
+              <button onClick={handleChangePassword} style={{ flex: 1, padding: '10px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#f97316,#c2410c)', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: '#fff' }}>Update Password</button>
             </div>
           </div>
         </div>
@@ -493,4 +493,3 @@ export default function AdminUsers() {
     </div>
   );
 }
-

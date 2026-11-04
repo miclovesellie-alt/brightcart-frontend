@@ -200,9 +200,9 @@
   transform: translateY(0);
 }
 
-/* Blue button */
+/* Primary button */
 .btn-primary {
-  background: #4f8ef7;
+  background: #f97316;
   color: #fff;
   border: none;
   padding: 12px 28px;
@@ -216,9 +216,39 @@
   gap: 8px;
 }
 .btn-primary:hover {
-  background: #3d7ef5;
-  box-shadow: 0 0 30px rgba(79,142,247,0.4);
+  background: #ea580c;
+  box-shadow: 0 0 30px rgba(249,115,22,0.35);
   transform: translateY(-1px);
+}
+
+.page-back-button {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  padding: 0;
+  border: 1px solid rgba(249,115,22,0.35);
+  border-radius: 50%;
+  color: #fb923c;
+  background: rgba(249,115,22,0.12);
+  cursor: pointer;
+  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease, opacity 180ms ease;
+}
+.page-back-button svg { transition: transform 180ms ease; }
+.page-back-button:hover:not(:disabled) {
+  transform: translateX(-2px) scale(1.04);
+  border-color: rgba(249,115,22,0.72);
+  background: rgba(249,115,22,0.24);
+}
+.page-back-button:hover:not(:disabled) svg { transform: translateX(-2px); }
+.page-back-button:active:not(:disabled) { transform: translateX(-3px) scale(0.96); }
+.page-back-button:focus-visible { outline: 2px solid #fb923c; outline-offset: 3px; }
+.page-back-button:disabled { opacity: 0.38; cursor: default; }
+
+@media (prefers-reduced-motion: reduce) {
+  .page-back-button,
+  .page-back-button svg { transition: none; }
 }
 
 .btn-ghost {
@@ -708,6 +738,23 @@ img {
   width: 100%;
   max-width: 100vw;
 }
+.storefront-navbar__brand-mark {
+  display: block;
+  width: 36px;
+  height: 19px;
+  flex: 0 0 auto;
+  object-fit: contain;
+  mix-blend-mode: screen;
+}
+.storefront-navbar__brand-wordmark {
+  display: block;
+  width: 100px;
+  height: 19px;
+  flex: 0 0 auto;
+  object-fit: contain;
+  mix-blend-mode: screen;
+}
+.admin-topbar-back { flex-shrink: 0; }
 
 @media (max-width: 768px) {
   .storefront-navbar {
@@ -768,6 +815,12 @@ img {
   .storefront-navbar__actions {
     gap: 0 !important;
   }
+}
+
+@media (max-width: 360px) {
+  .storefront-back-button { width: 28px; height: 28px; flex-basis: 28px; }
+  .storefront-navbar__brand-mark { width: 29px !important; }
+  .storefront-navbar__brand-wordmark { width: 80px !important; }
 }
 
 /* Product images stay contained and the detail layout collapses cleanly. */
@@ -855,4 +908,3 @@ img {
     display: none !important;
   }
 }
-

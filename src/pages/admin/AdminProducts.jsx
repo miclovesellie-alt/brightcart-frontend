@@ -220,7 +220,7 @@ export default function AdminProducts() {
           <h2 style={{ fontWeight: 800, fontSize: 18, color: '#0f172a', margin: 0 }}>Products</h2>
           <p style={{ color: '#64748b', fontSize: 12, margin: '2px 0 0' }}>{realProducts.length} products &mdash; {filtered.length} shown</p>
         </div>
-        <button onClick={openNew} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+        <button onClick={openNew} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', background: '#f97316', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
           <Plus size={15} /> Add Product
         </button>
       </div>
@@ -272,7 +272,7 @@ export default function AdminProducts() {
                     <td style={{ padding: '10px 14px', color: '#64748b' }}>{product.supplier || 'Not assigned'}</td>
                     <td style={{ padding: '10px 14px' }}><span style={{ background: `${statusColor}18`, color: statusColor, borderRadius: 20, padding: '2px 9px', fontWeight: 700, fontSize: 10 }}>{product.status || 'Active'}</span></td>
                     <td style={{ padding: '10px 14px' }}><div style={{ display: 'flex', gap: 6 }}>
-                      <button aria-label={`Edit ${product.name}`} onClick={() => openEdit(product)} style={{ padding: '5px 9px', borderRadius: 6, background: '#eff6ff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Edit2 size={12} color="#2563eb" /></button>
+                      <button aria-label={`Edit ${product.name}`} onClick={() => openEdit(product)} style={{ padding: '5px 9px', borderRadius: 6, background: '#fff7ed', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Edit2 size={12} color="#c2410c" /></button>
                       <button aria-label={`Delete ${product.name}`} onClick={() => setDeleteId(product.id)} style={{ padding: '5px 9px', borderRadius: 6, background: '#fef2f2', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Trash2 size={12} color="#ef4444" /></button>
                     </div></td>
                   </tr>
@@ -308,7 +308,7 @@ export default function AdminProducts() {
               <label style={{ gridColumn: '1/-1', display: 'flex', alignItems: 'center', gap: 9, color: '#334155', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}><input type="checkbox" checked={form.featured} onChange={event => F('featured', event.target.checked)} /> Feature this product on the home page</label>
 
               <div style={{ gridColumn: '1/-1', background: '#f8fafc', border: '1px solid #e8edf3', borderRadius: 10, padding: 14 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}><div><label style={{ ...lbl, marginBottom: 2 }}>PRODUCT IMAGES</label><small style={hint}>Paste direct, publicly accessible image URLs. First image is the main photo.</small></div><button type="button" onClick={() => F('images', [...form.images, ''])} style={{ display: 'flex', alignItems: 'center', gap: 5, border: '1px solid #bfdbfe', color: '#1d4ed8', background: '#eff6ff', borderRadius: 7, padding: '7px 10px', fontWeight: 700, fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap' }}><ImagePlus size={14} /> Add photo</button></div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}><div><label style={{ ...lbl, marginBottom: 2 }}>PRODUCT IMAGES</label><small style={hint}>Paste direct, publicly accessible image URLs. First image is the main photo.</small></div><button type="button" onClick={() => F('images', [...form.images, ''])} style={{ display: 'flex', alignItems: 'center', gap: 5, border: '1px solid #fed7aa', color: '#c2410c', background: '#fff7ed', borderRadius: 7, padding: '7px 10px', fontWeight: 700, fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap' }}><ImagePlus size={14} /> Add photo</button></div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
                   {form.images.map((image, index) => <div key={index} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                     <div style={{ flex: 1 }}><input type="url" value={image} onChange={event => updateImage(index, event.target.value)} placeholder="https://example.com/product-image.jpg" style={inp} /></div>
@@ -335,7 +335,7 @@ export default function AdminProducts() {
             {formError && <div role="alert" style={{ marginTop: 14, color: '#b91c1c', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '9px 11px', fontSize: 12 }}>{formError}</div>}
             <div style={{ display: 'flex', gap: 10, marginTop: 20, paddingTop: 16, borderTop: '1px solid #f1f5f9' }}>
               <button onClick={closeModal} disabled={saving} style={{ flex: 1, padding: 10, borderRadius: 9, border: '1px solid #e2e8f0', background: '#fff', color: '#374151', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleSave} disabled={saving} style={{ flex: 2, padding: 10, borderRadius: 9, border: 'none', background: saving ? '#93c5fd' : '#2563eb', color: '#fff', fontWeight: 700, fontSize: 13, cursor: saving ? 'wait' : 'pointer' }}>{saving ? 'Saving…' : editProduct ? 'Save Changes' : 'Add Product'}</button>
+              <button onClick={handleSave} disabled={saving} style={{ flex: 2, padding: 10, borderRadius: 9, border: 'none', background: saving ? '#fdba74' : '#f97316', color: '#fff', fontWeight: 700, fontSize: 13, cursor: saving ? 'wait' : 'pointer' }}>{saving ? 'Saving…' : editProduct ? 'Save Changes' : 'Add Product'}</button>
             </div>
           </div>
         </div>
@@ -361,4 +361,3 @@ function Metric({ label, value, color = '#0f172a' }) {
 const lbl = { fontSize: 11, fontWeight: 700, color: '#374151', marginBottom: 5, display: 'block', letterSpacing: '0.04em' };
 const inp = { width: '100%', minWidth: 0, padding: '9px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, outline: 'none', boxSizing: 'border-box', background: '#fff', color: '#0f172a' };
 const hint = { display: 'block', color: '#64748b', fontSize: 10 };
-

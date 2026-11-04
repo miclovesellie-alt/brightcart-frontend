@@ -112,7 +112,7 @@ export default function AdminDashboard() {
           <h2 style={{ fontWeight: 800, fontSize: 20, color: '#0f172a', margin: 0 }}>Welcome, {user?.name || 'Admin'}</h2>
           <p style={{ color: '#64748b', fontSize: 13, margin: '2px 0 0' }}>Live activity from your Shoppercart store.</p>
         </div>
-        <button onClick={() => navigate('admin-products')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: 'none', background: '#2563eb', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+        <button onClick={() => navigate('admin-products')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: 'none', background: '#f97316', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
           <Package size={14} /> Manage Products
         </button>
       </div>
@@ -180,7 +180,7 @@ export default function AdminDashboard() {
         <section style={{ background: '#fff', borderRadius: 14, border: '1px solid #e8edf3', overflow: 'hidden' }}>
           <div style={{ padding: '14px 18px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>Products sold</div>
-            <button onClick={() => navigate('admin-products')} style={{ fontSize: 11, color: '#2563eb', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}>Manage products <ArrowRight size={12} /></button>
+            <button onClick={() => navigate('admin-products')} style={{ fontSize: 11, color: '#c2410c', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}>Manage products <ArrowRight size={12} /></button>
           </div>
           {data.topProducts.length ? <div style={{ overflowX: 'auto' }}><table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse', minWidth: 360 }}>
             <thead><tr style={{ background: '#f8fafc' }}>{['Product', 'Units', 'Paid product value'].map(header => <th key={header} style={{ padding: '9px 14px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#64748b' }}>{header}</th>)}</tr></thead>
@@ -199,7 +199,7 @@ export default function AdminDashboard() {
               <span style={{ fontSize: 10, fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap' }}>{format(getOrderAmount(order))}</span>
             </div>
           )) : <div style={{ color: '#94a3b8', fontSize: 12, padding: '12px 0' }}>No orders have been placed yet.</div>}
-          <button onClick={() => navigate('admin-orders')} style={{ marginTop: 12, padding: 0, color: '#2563eb', background: 'none', border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>View all orders <ArrowRight size={12} style={{ verticalAlign: 'middle' }} /></button>
+          <button onClick={() => navigate('admin-orders')} style={{ marginTop: 12, padding: 0, color: '#c2410c', background: 'none', border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>View all orders <ArrowRight size={12} style={{ verticalAlign: 'middle' }} /></button>
         </section>
       </div>
     </div>

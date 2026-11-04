@@ -291,8 +291,8 @@ export default function CheckoutPage() {
                     style={{
                       padding: '18px 20px',
                       borderRadius: '14px',
-                      background: paymentMethod === 'paystack' ? 'rgba(79, 142, 247, 0.12)' : 'rgba(255,255,255,0.03)',
-                      border: paymentMethod === 'paystack' ? '1.5px solid #4f8ef7' : '1px solid rgba(255,255,255,0.08)',
+                      background: paymentMethod === 'paystack' ? 'rgba(249, 115, 22, 0.12)' : 'rgba(255,255,255,0.03)',
+                      border: paymentMethod === 'paystack' ? '1.5px solid #f97316' : '1px solid rgba(255,255,255,0.08)',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -317,7 +317,7 @@ export default function CheckoutPage() {
                     </div>
                     <div style={{
                       width: '18px', height: '18px', borderRadius: '50%',
-                      border: paymentMethod === 'paystack' ? '5px solid #4f8ef7' : '2px solid #475569',
+                      border: paymentMethod === 'paystack' ? '5px solid #f97316' : '2px solid #475569',
                       background: '#fff'
                     }} />
                   </div>
@@ -328,8 +328,8 @@ export default function CheckoutPage() {
                     style={{
                       padding: '18px 20px',
                       borderRadius: '14px',
-                      background: paymentMethod === 'cash' ? 'rgba(79, 142, 247, 0.12)' : 'rgba(255,255,255,0.03)',
-                      border: paymentMethod === 'cash' ? '1.5px solid #4f8ef7' : '1px solid rgba(255,255,255,0.08)',
+                      background: paymentMethod === 'cash' ? 'rgba(249, 115, 22, 0.12)' : 'rgba(255,255,255,0.03)',
+                      border: paymentMethod === 'cash' ? '1.5px solid #f97316' : '1px solid rgba(255,255,255,0.08)',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -351,7 +351,7 @@ export default function CheckoutPage() {
                     </div>
                     <div style={{
                       width: '18px', height: '18px', borderRadius: '50%',
-                      border: paymentMethod === 'cash' ? '5px solid #4f8ef7' : '2px solid #475569',
+                      border: paymentMethod === 'cash' ? '5px solid #f97316' : '2px solid #475569',
                       background: '#fff'
                     }} />
                   </div>

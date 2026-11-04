@@ -98,7 +98,7 @@ function ProductCard({ product, onClick }) {
         e.currentTarget.style.boxShadow = 'none';
       }}
     >
-      <ProductImageGallery product={product} alt={product.name} className="product-img-wrap" style={{ height: '200px', background: '#111118', borderRadius: '8px' }} imageStyle={{ padding: '12px', transition: 'transform 0.4s ease' }} />
+      <ProductImageGallery product={product} alt={product.name} className="product-img-wrap" showControls={false} style={{ height: '200px', background: '#111118', borderRadius: '8px' }} imageStyle={{ padding: '12px', transition: 'transform 0.4s ease' }} />
 
       {tagLabel ? (
         <span style={{
@@ -154,7 +154,7 @@ function ProductCard({ product, onClick }) {
           width: '100%',
           marginTop: 'auto',
           padding: '10px',
-          background: added ? 'rgba(34,197,94,0.2)' : '#4f8ef7',
+          background: added ? 'rgba(34,197,94,0.2)' : '#f97316',
           border: 'none',
           borderRadius: '8px',
           color: '#fff',
@@ -169,13 +169,13 @@ function ProductCard({ product, onClick }) {
         }}
         onMouseEnter={(e) => {
           if (!added) {
-            e.currentTarget.style.background = '#3d7ef5';
-            e.currentTarget.style.boxShadow = '0 0 25px rgba(79,142,247,0.4)';
+            e.currentTarget.style.background = '#ea580c';
+            e.currentTarget.style.boxShadow = '0 0 25px rgba(249,115,22,0.35)';
           }
         }}
         onMouseLeave={(e) => {
           if (!added) {
-            e.currentTarget.style.background = '#4f8ef7';
+            e.currentTarget.style.background = '#f97316';
             e.currentTarget.style.boxShadow = 'none';
           }
         }}
@@ -343,4 +343,3 @@ export default function ProductsPage() {
     </div>
   );
 }
-

@@ -54,7 +54,7 @@ export default function AdminSuppliers() {
           <div style={{ fontSize: 11, fontWeight: 700, color: '#334155', marginBottom: 6 }}>To enable a real supplier connection</div>
           <p style={{ margin: 0, fontSize: 11, color: '#64748b', lineHeight: 1.6 }}>Choose a supplier with an official API, implement its backend adapter, then add its credentials as Render environment variables. Credentials must stay on the backend; entering a key here would not connect a provider.</p>
         </div>
-        <button onClick={() => navigate('admin-dropshipping')} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 16, padding: '9px 14px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Open product research <ExternalLink size={13} /></button>
+        <button onClick={() => navigate('admin-dropshipping')} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 16, padding: '9px 14px', background: '#f97316', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Open product research <ExternalLink size={13} /></button>
       </section>
     </div>
   );

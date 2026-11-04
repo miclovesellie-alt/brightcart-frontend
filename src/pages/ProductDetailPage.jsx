@@ -208,8 +208,8 @@ export default function ProductDetailPage() {
                         onClick={() => { setSelectedColorKey(key); setQty(1); }}
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 10px',
-                          borderRadius: 999, border: `1px solid ${active ? '#4f8ef7' : 'rgba(255,255,255,.14)'}`,
-                          background: active ? 'rgba(79,142,247,.14)' : 'rgba(255,255,255,.04)',
+                          borderRadius: 999, border: `1px solid ${active ? '#f97316' : 'rgba(255,255,255,.14)'}`,
+                          background: active ? 'rgba(249,115,22,.14)' : 'rgba(255,255,255,.04)',
                           color: '#fff', cursor: 'pointer', fontSize: 13,
                         }}
                       >
@@ -288,7 +288,7 @@ export default function ProductDetailPage() {
                 style={{
                   flex: 1,
                   justifyContent: 'center',
-                  background: added ? 'rgba(34,197,94,0.3)' : '#4f8ef7',
+                  background: added ? 'rgba(34,197,94,0.3)' : '#f97316',
                   boxShadow: added ? 'none' : undefined,
                 }}
               >

@@ -38,7 +38,7 @@ export default function Footer() {
               <span style={{ color:'#fff', fontSize:'20px', fontWeight:800, letterSpacing:'-0.5px' }}>Shoppercart</span>
             </button>
             <p style={{ color:'#4a5568', fontSize:'14px', maxWidth:'260px', lineHeight:1.6 }}>
-              Premium tech delivered to your door. Curated for the modern world.
+              Quality tech, delivered straight to your door.
             </p>
           </div>
 
@@ -46,7 +46,7 @@ export default function Footer() {
           <div style={{ display:'flex', gap:'12px' }}>
             {[Twitter, Github, Instagram, Linkedin].map((Icon, i) => (
               <button key={i} style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', color:'rgba(255,255,255,0.5)', width:'36px', height:'36px', borderRadius:'8px', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s ease' }}
-                onMouseEnter={e => { e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='rgba(79,142,247,0.4)'; e.currentTarget.style.background='rgba(79,142,247,0.1)'; }}
+                onMouseEnter={e => { e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='rgba(249,115,22,0.55)'; e.currentTarget.style.background='rgba(249,115,22,0.16)'; }}
                 onMouseLeave={e => { e.currentTarget.style.color='rgba(255,255,255,0.5)'; e.currentTarget.style.borderColor='rgba(255,255,255,0.08)'; e.currentTarget.style.background='rgba(255,255,255,0.05)'; }}>
                 <Icon size={15} />
               </button>
@@ -76,7 +76,7 @@ export default function Footer() {
           ))}
         </div>
 
-        {/* Bottom bar — copyright only, no admin button */}
+        {/* Bottom bar: copyright only, no admin button */}
         <div className="section-divider" style={{ marginBottom:'24px' }} />
         <div style={{ display:'flex', justifyContent:'center', alignItems:'center' }}>
           <p style={{ color:'#4a5568', fontSize:'13px' }}>

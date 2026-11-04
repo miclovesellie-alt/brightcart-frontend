@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useStore } from '../context/StoreContext';
-import { ShoppingCart, User, Menu, X, ChevronDown, Zap } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, ChevronDown } from 'lucide-react';
 import CurrencySelector from './CurrencySelector';
+import PageBackButton from './PageBackButton';
 
 const NAV_LINKS = [
   { label: 'Home', page: 'home' },
@@ -72,14 +73,16 @@ export default function Navbar() {
           gap: '32px',
         }}
       >
+        <PageBackButton className="storefront-back-button" />
         {/* Logo */}
         <button
           className="storefront-navbar__brand"
+          aria-label="Shoppercart home"
           onClick={() => navigate('home')}
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
+            gap: '4px',
             background: 'none',
             border: 'none',
             cursor: 'pointer',
@@ -87,17 +90,8 @@ export default function Navbar() {
             flexShrink: 0,
           }}
         >
-          <Zap size={18} color="#4f8ef7" fill="#4f8ef7" />
-          <span className="storefront-navbar__brand-name" style={{ color: '#fff', fontSize: '18px', fontWeight: 800, letterSpacing: '-0.5px' }}>
-            Shoppercart
-          </span>
-          <span style={{
-            width: '6px', height: '6px',
-            borderRadius: '50%',
-            background: '#4f8ef7',
-            display: 'inline-block',
-            boxShadow: '0 0 8px rgba(79,142,247,0.8)',
-          }} />
+          <img className="storefront-navbar__brand-mark" src="/shoppercart-mark.png" alt="" />
+          <img className="storefront-navbar__brand-wordmark" src="/shoppercart-wordmark.png" alt="Shoppercart" />
         </button>
 
         {/* Center Nav - Desktop */}
@@ -161,7 +155,7 @@ export default function Navbar() {
                         }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.color = '#fff';
-                          e.currentTarget.style.background = 'rgba(79,142,247,0.1)';
+                          e.currentTarget.style.background = 'rgba(249,115,22,0.16)';
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.color = 'rgba(255,255,255,0.7)';
@@ -229,7 +223,7 @@ export default function Navbar() {
                 position: 'absolute',
                 top: '2px',
                 right: '2px',
-                background: '#4f8ef7',
+                background: '#f97316',
                 color: '#fff',
                 fontSize: '10px',
                 fontWeight: 700,
@@ -273,8 +267,8 @@ export default function Navbar() {
             className="hidden-mobile"
             style={{
               background: 'transparent',
-              border: '1px solid #4f8ef7',
-              color: '#4f8ef7',
+              border: '1px solid #f97316',
+              color: '#fb923c',
               padding: '7px 18px',
               borderRadius: '7px',
               fontSize: '13px',
@@ -283,12 +277,12 @@ export default function Navbar() {
               transition: 'all 0.3s ease',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#4f8ef7';
+              e.currentTarget.style.background = '#f97316';
               e.currentTarget.style.color = '#fff';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = '#4f8ef7';
+              e.currentTarget.style.color = '#fb923c';
             }}
           >
             Shop Now

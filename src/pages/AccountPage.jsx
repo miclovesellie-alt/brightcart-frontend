@@ -284,7 +284,7 @@ export default function AccountPage() {
                     borderRadius: '7px',
                     fontSize: '14px',
                     fontWeight: 600,
-                    background: tab === t ? '#4f8ef7' : 'transparent',
+                    background: tab === t ? '#f97316' : 'transparent',
                     color: tab === t ? '#fff' : '#8892a4',
                     border: 'none',
                     cursor: 'pointer',
@@ -457,4 +457,3 @@ export default function AccountPage() {
     </div>
   );
 }
-

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { api } from '../utils/api';
 import { getStorefrontProducts } from '../utils/catalog';
 import {
@@ -32,6 +32,16 @@ export function StoreProvider({ children }) {
   const [adminUsers, setAdminUsers] = useState([]);
   const [page, setPage] = useState(() => sessionGet('brightcart_page', 'home'));
   const [pageParams, setPageParams] = useState(() => sessionGet('brightcart_page_params', {}));
+  const [pageHistory, setPageHistory] = useState(() => {
+    const history = sessionGet('brightcart_page_history', []);
+    return Array.isArray(history) ? history.filter(item => item && typeof item.page === 'string') : [];
+  });
+  const pageRef = useRef(page);
+  const pageParamsRef = useRef(pageParams);
+  const pageHistoryRef = useRef(pageHistory);
+  pageRef.current = page;
+  pageParamsRef.current = pageParams;
+  pageHistoryRef.current = pageHistory;
 
   // The public catalog never includes draft products.
   useEffect(() => {
@@ -96,6 +106,7 @@ export function StoreProvider({ children }) {
   // Keep page routing in sessionStorage
   useEffect(() => { sessionSet('brightcart_page', page); }, [page]);
   useEffect(() => { sessionSet('brightcart_page_params', pageParams); }, [pageParams]);
+  useEffect(() => { sessionSet('brightcart_page_history', pageHistory); }, [pageHistory]);
 
   // Start idle watchdog when an admin logs in; stop it on logout
   useEffect(() => {
@@ -104,6 +115,13 @@ export function StoreProvider({ children }) {
         destroySessionToken();
         setUserState(null);
         sessionSet('brightcart_page', 'home');
+        sessionSet('brightcart_page_params', {});
+        sessionSet('brightcart_page_history', []);
+        pageRef.current = 'home';
+        pageParamsRef.current = {};
+        pageHistoryRef.current = [];
+        setPageParams({});
+        setPageHistory([]);
         setPage('home');
       });
     } else {
@@ -113,8 +131,39 @@ export function StoreProvider({ children }) {
   }, [user?.role]);
 
   const navigate = useCallback((newPage, params = {}) => {
+    const nextParams = params || {};
+    const currentPage = pageRef.current;
+    const currentParams = pageParamsRef.current || {};
+    if (currentPage !== newPage || JSON.stringify(currentParams) !== JSON.stringify(nextParams)) {
+      const nextHistory = [...pageHistoryRef.current, { page: currentPage, pageParams: currentParams }].slice(-40);
+      pageHistoryRef.current = nextHistory;
+      setPageHistory(nextHistory);
+    }
+    pageRef.current = newPage;
+    pageParamsRef.current = nextParams;
     setPage(newPage);
-    setPageParams(params);
+    setPageParams(nextParams);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const goBack = useCallback(() => {
+    const history = pageHistoryRef.current;
+    const previous = history[history.length - 1];
+    if (previous) {
+      const nextHistory = history.slice(0, -1);
+      const nextParams = previous.pageParams || {};
+      pageHistoryRef.current = nextHistory;
+      pageRef.current = previous.page;
+      pageParamsRef.current = nextParams;
+      setPageHistory(nextHistory);
+      setPage(previous.page);
+      setPageParams(nextParams);
+    } else if (pageRef.current !== 'home') {
+      pageRef.current = 'home';
+      pageParamsRef.current = {};
+      setPage('home');
+      setPageParams({});
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
@@ -229,11 +278,17 @@ export function StoreProvider({ children }) {
     destroySessionToken();
     sessionStorage.removeItem('brightcart_page');
     sessionStorage.removeItem('brightcart_page_params');
+    sessionStorage.removeItem('brightcart_page_history');
+    pageHistoryRef.current = [];
+    pageRef.current = 'home';
+    pageParamsRef.current = {};
     setUserState(null);
     setOrders([]);
     setAdminProducts([]);
     setAdminUsers([]);
     setPage('home');
+    setPageParams({});
+    setPageHistory([]);
   }, []);
 
   // Keep storefront products and the admin draft catalog separate.
@@ -297,7 +352,9 @@ export function StoreProvider({ children }) {
       orders,
       page,
       pageParams,
+      canGoBack: pageHistory.length > 0 || page !== 'home',
       navigate,
+      goBack,
       addToCart,
       removeFromCart,
       updateQty,

@@ -182,7 +182,7 @@
 .ds-blocked-note, .ds-purchase-note { align-items: center; display: flex; font-size: 9px; gap: 6px; margin-top: 9px; }
 .ds-blocked-note { color: #b45309; }
 .ds-purchase-note { color: #047857; }
-.ds-link-button { background: transparent; border: 0; color: #2563eb; cursor: pointer; font-size: 10px; font-weight: 800; margin-top: 10px; padding: 0; }
+.ds-link-button { background: transparent; border: 0; color: #c2410c; cursor: pointer; font-size: 10px; font-weight: 800; margin-top: 10px; padding: 0; }
 .ds-inline-form { align-items: end; background: #f8fafc; border-radius: 10px; display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 11px; padding: 11px; }
 .ds-inline-form button { font-size: 10px; min-height: 36px; }
 .ds-connection-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
@@ -230,4 +230,3 @@
   .ds-shopper-preview { flex-direction: column; }
   .ds-shopper-preview-image { flex-basis: auto; height: 170px; width: 100%; }
 }
-
