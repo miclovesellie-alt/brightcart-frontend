@@ -27,13 +27,19 @@ export default function AdminOrders() {
   const { orders = [], updateOrder } = useStore();
   const { format } = useCurrency();
   const [filter, setFilter] = useState('All');
+  const [sortBy, setSortBy] = useState('newest');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
   const [copied, setCopied] = useState('');
   const [savingOrder, setSavingOrder] = useState('');
   const [error, setError] = useState('');
 
-  const allOrders = [...orders].sort((a, b) => (getOrderDate(b)?.getTime() || 0) - (getOrderDate(a)?.getTime() || 0));
+  const allOrders = [...orders].sort((a, b) => {
+    if (sortBy === 'oldest') return (getOrderDate(a)?.getTime() || 0) - (getOrderDate(b)?.getTime() || 0);
+    if (sortBy === 'total-asc') return getOrderAmount(a) - getOrderAmount(b);
+    if (sortBy === 'total-desc') return getOrderAmount(b) - getOrderAmount(a);
+    return (getOrderDate(b)?.getTime() || 0) - (getOrderDate(a)?.getTime() || 0);
+  });
   const filtered = allOrders.filter(order => {
     const searchText = `${order.customer || ''} ${order.email || ''} ${order.id || ''}`.toLowerCase();
     return (filter === 'All' || order.status === filter) && searchText.includes(search.toLowerCase());
@@ -79,14 +85,12 @@ export default function AdminOrders() {
       {error && <div role="alert" style={{ padding: '10px 12px', borderRadius: 9, background: '#fef2f2', color: '#b91c1c', fontSize: 12 }}>{error}</div>}
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-          {STATUSES.map(status => {
-            const color = STATUS_COLORS[status];
-            return <button key={status} onClick={() => setFilter(status)} style={{ padding: '6px 11px', borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: 'pointer', background: filter === status ? (color?.bg || '#eff6ff') : '#fff', color: filter === status ? (color?.text || '#2563eb') : '#64748b', border: `1px solid ${filter === status ? (color?.dot || '#3b82f6') + '60' : '#e2e8f0'}` }}>
-              {status} <span style={{ opacity: 0.7 }}>({counts[status]})</span>
-            </button>;
-          })}
-        </div>
+        <select aria-label="Filter orders by status" value={filter} onChange={event => setFilter(event.target.value)} style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12, color: '#374151', background: '#fff', cursor: 'pointer', minWidth: 200 }}>
+          {STATUSES.map(status => <option key={status} value={status}>{status} ({counts[status]})</option>)}
+        </select>
+        <select aria-label="Sort orders" value={sortBy} onChange={event => setSortBy(event.target.value)} style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12, color: '#374151', background: '#fff', cursor: 'pointer', minWidth: 150 }}>
+          <option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="total-desc">Total: high to low</option><option value="total-asc">Total: low to high</option>
+        </select>
         <div style={{ position: 'relative', marginLeft: 'auto' }}>
           <Search size={13} color="#94a3b8" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
           <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search orders…" style={{ padding: '7px 12px 7px 30px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12, outline: 'none', width: 200 }} />
@@ -137,3 +141,4 @@ export default function AdminOrders() {
     </div>
   );
 }
+
