@@ -11,7 +11,7 @@ import ProductImageGallery from '../../components/ProductImageGallery';
 import { categoryLabel, categorySlug } from '../../utils/productImages';
 import './dropshipping.css';
 
-const AI_IMPORT_MARGIN_PERCENT = 20;
+const AI_IMPORT_MARGIN_PERCENT = 35;
 
 function roundMoneyInCurrency(amount, code) {
   const decimals = ['JPY', 'KRW', 'NGN'].includes(code) ? 0 : 2;
@@ -473,7 +473,7 @@ export default function AIDropshipping() {
     const recommended = convertBetween(recommendedUsd, 'USD', entryCurrency);
     setEditingDraft(prev => ({ ...prev, price: String(roundMoneyInCurrency(recommended, entryCurrency)) }));
     setError('');
-    if (shippingStatus === 'unknown') setNotice('Price recalculated at 20% contribution margin using vendor cost only. Confirm shipping and recalculate before publishing.');
+    if (shippingStatus === 'unknown') setNotice('Price recalculated at 35% contribution margin using vendor cost only. Confirm shipping and recalculate before publishing.');
     else if (policy.feesConfigured === false) setNotice('Price recalculated with 0% payment/platform fees. Configure actual fees before publishing.');
   }
 
@@ -700,7 +700,7 @@ export default function AIDropshipping() {
           {section === 'research' && (
             <section className="ds-stack">
               <div className="ds-section-head"><div><h2>Product research</h2><p>Import a supplier product page, verify its facts and pricing, then save it for admin review.</p></div></div>
-              <div className="ds-callout"><AlertTriangle size={17} /><div><strong>Source and uncertainty</strong><span>AI imports target a fixed 20% contribution margin after configured payment and platform fees. Confirmed shipping is included; when freight is unknown, the draft price is based on vendor unit cost only and must be recalculated after shipping is verified.</span></div></div>
+              <div className="ds-callout"><AlertTriangle size={17} /><div><strong>Source and uncertainty</strong><span>AI imports target a fixed 35% contribution margin after configured payment and platform fees. Confirmed shipping is included; when freight is unknown, the draft price is based on vendor unit cost only and must be recalculated after shipping is verified.</span></div></div>
               <section className="ds-panel ds-form-panel" style={cardStyle}>
                 <div className="ds-panel-head"><div><h3>Import from supplier URL</h3><p>Enter a product page to extract its listed facts, images, vendor price, and structured color options.</p></div><StatusPill tone="blue">Source review required</StatusPill></div>
                 <div className="ds-form-grid">
@@ -708,7 +708,7 @@ export default function AIDropshipping() {
                   <Field label="SHIPPING DESTINATION (COUNTRY OR ISO CODE)" value={destinationCountry} onChange={event => setDestinationCountry(event.target.value)} placeholder="e.g. GH" help="The importer only accepts a shipping rate explicitly marked for this destination." />
                 </div>
                 <div className="ds-form-foot"><span>Extraction reads public HTML and product metadata only. Pages that require sign-in or JavaScript may need manual entry.</span><button type="button" style={buttonStyle} disabled={extracting || saving} onClick={extractSupplierProduct}><Search size={15} /> {extracting ? "Reading supplier page…" : "Extract product details"}</button></div>
-                {extractionSummary && <div className="ds-ai-note"><Sparkles size={13} />{extractionSummary.unitCost != null ? `Vendor cost: ${extractionSummary.unitCost} ${extractionSummary.currency || "(currency not stated)"}. ` : ""}{extractionSummary.suggestedRetailPrice != null ? `Suggested selling price: ${extractionSummary.suggestedRetailPrice} ${extractionSummary.currency} at a 20% contribution margin${extractionSummary.shippingStatus === 'unknown' ? ', excluding unconfirmed shipping' : ''}.` : "A selling price needs a verified vendor cost."}{extractionSummary.pricingPolicy?.feesConfigured === false ? " Payment/platform fees currently default to 0; configure them before publishing." : ""}</div>}
+                {extractionSummary && <div className="ds-ai-note"><Sparkles size={13} />{extractionSummary.unitCost != null ? `Vendor cost: ${extractionSummary.unitCost} ${extractionSummary.currency || "(currency not stated)"}. ` : ""}{extractionSummary.suggestedRetailPrice != null ? `Suggested selling price: ${extractionSummary.suggestedRetailPrice} ${extractionSummary.currency} at a 35% contribution margin${extractionSummary.shippingStatus === 'unknown' ? ', excluding unconfirmed shipping' : ''}.` : "A selling price needs a verified vendor cost."}{extractionSummary.pricingPolicy?.feesConfigured === false ? " Payment/platform fees currently default to 0; configure them before publishing." : ""}</div>}
               </section>
               <form className="ds-panel ds-form-panel" style={cardStyle} onSubmit={submitCandidate}>
                 <div className="ds-panel-head"><div><h3>Review extracted facts</h3><p>Confirm missing values before saving. Amounts are stored in the catalog’s USD base currency.</p></div><StatusPill tone="blue">Draft only</StatusPill></div>
@@ -723,14 +723,14 @@ export default function AIDropshipping() {
                   <Field label={`SUPPLIER UNIT COST (${candidateForm.currency || currency})`} name="unitCost" value={candidateForm.unitCost} onChange={onCandidateField} type="number" min="0" step="0.01" placeholder="Unknown" />
                   <label className="ds-field"><span style={labelStyle}>SUPPLIER SHIPPING STATUS *</span><select name="shippingStatus" value={candidateForm.shippingStatus} onChange={onCandidateField} style={inputStyle}><option value="unknown">Unknown / not shown</option><option value="free">Free shipping confirmed</option><option value="paid">Paid shipping confirmed</option></select></label>
                   <Field label={`SHIPPING COST (${candidateForm.currency || currency})`} name="shippingCost" value={candidateForm.shippingCost} onChange={onCandidateField} type="number" min="0" step="0.01" placeholder={candidateForm.shippingStatus === 'unknown' ? 'Unknown' : candidateForm.shippingStatus === 'free' ? '0' : 'Required when paid'} required={candidateForm.shippingStatus === 'paid'} />
-                  <Field label={`20% TARGET SELLING PRICE (${candidateForm.currency || currency})`} name="retailPrice" value={candidateForm.retailPrice} type="number" min="0.01" step="0.01" placeholder="Calculated from vendor cost" readOnly help="Calculated from vendor cost, confirmed shipping when available, and configured fees. Unknown shipping is excluded until verified." />
+                  <Field label={`35% TARGET SELLING PRICE (${candidateForm.currency || currency})`} name="retailPrice" value={candidateForm.retailPrice} type="number" min="0.01" step="0.01" placeholder="Calculated from vendor cost" readOnly help="Calculated from vendor cost, confirmed shipping when available, and configured fees. Unknown shipping is excluded until verified." />
                   <Field label="AVAILABLE STOCK" name="availableStock" value={candidateForm.availableStock} onChange={onCandidateField} type="number" min="0" step="1" placeholder="Unknown" />
                   <Field label="SHIPPING TIME (DAYS)" name="shippingDays" value={candidateForm.shippingDays} onChange={onCandidateField} type="number" min="0" step="1" placeholder="Unknown" />
                   <Field label="COLOR VARIANTS (COLOR | IMAGE URL)" name="variants" value={candidateForm.variants} onChange={onCandidateField} placeholder="Black | https://… (one per line)" />
                   <label className="ds-field ds-span-2"><span style={labelStyle}>PRODUCT IMAGES (ONE URL PER LINE)</span><textarea name="images" value={candidateForm.images} onChange={onCandidateField} rows="3" style={{ ...inputStyle, resize: 'vertical' }} placeholder="https://supplier.com/image.jpg" /></label>
                   <label className="ds-field ds-span-2"><span style={labelStyle}>VERIFIED PRODUCT FACTS (ONE PER LINE)</span><textarea name="verifiedFacts" value={candidateForm.verifiedFacts} onChange={onCandidateField} rows="4" style={{ ...inputStyle, resize: 'vertical' }} placeholder="Only enter details confirmed by the source." /></label>
                 </div>
-                <div className="ds-form-foot"><span>All AI imported drafts use a fixed 20% contribution margin after configured fees. Unknown freight is excluded and flagged.</span><button style={buttonStyle} disabled={saving}><Plus size={15} /> Save for draft review</button></div>
+                <div className="ds-form-foot"><span>All AI imported drafts use a fixed 35% contribution margin after configured fees. Unknown freight is excluded and flagged.</span><button style={buttonStyle} disabled={saving}><Plus size={15} /> Save for draft review</button></div>
               </form>
               {researchMessage && <div className="ds-alert ds-alert-warning" role="status"><AlertTriangle size={16} />{researchMessage}</div>}
               <section className="ds-panel" style={cardStyle}>
@@ -748,7 +748,7 @@ export default function AIDropshipping() {
                       <div className="ds-research-main">
                         <div className="ds-research-title"><div><h4>{candidate.productName}</h4><small>{candidate.supplierName} · {categoryLabel(candidate.category)}</small></div><div className="ds-research-card-actions"><StatusPill tone={candidate.state === 'imported' ? 'green' : 'blue'}>{candidate.state || 'researched'}</StatusPill><button type="button" className="ds-icon-button ds-research-close" onClick={() => removeResearch(candidate)} disabled={saving} aria-label={`Remove ${candidate.productName} from research`} title="Remove from research"><X size={15} /></button></div></div>
                         <p className="ds-research-facts">{candidate.verifiedFacts?.slice(0, 2).join(' · ') || 'No verified product facts supplied.'}</p>
-                        <div className="ds-research-data"><span>Vendor cost <b>{candidate.unitCost == null ? 'Unknown' : format(candidate.unitCost)}</b></span><span>20% selling price <b>{candidate.retailPrice == null ? 'Pending' : format(candidate.retailPrice)}</b></span><span>Stock <b>{candidate.availableStock ?? 'Unknown'}</b></span><span>Ship <b>{candidate.shippingStatus === 'free' ? 'Free' : candidate.shippingStatus === 'paid' ? format(candidate.shippingCost || 0) : 'Unknown'}</b></span></div>
+                        <div className="ds-research-data"><span>Vendor cost <b>{candidate.unitCost == null ? 'Unknown' : format(candidate.unitCost)}</b></span><span>35% selling price <b>{candidate.retailPrice == null ? 'Pending' : format(candidate.retailPrice)}</b></span><span>Stock <b>{candidate.availableStock ?? 'Unknown'}</b></span><span>Ship <b>{candidate.shippingStatus === 'free' ? 'Free' : candidate.shippingStatus === 'paid' ? format(candidate.shippingCost || 0) : 'Unknown'}</b></span></div>
                         <div className="ds-score-row"><div className="ds-score-track"><i style={{ width: `${candidate.score || 0}%` }} /></div><strong>{candidate.score || 0}<small>/100 operational fit</small></strong><a href={candidate.sourceUrl} target="_blank" rel="noreferrer">Source <ExternalLink size={12} /></a></div>
                         <div className="ds-research-actions">
                           <button style={secondaryStyle} onClick={() => setSelectedCandidate(candidate)}><Eye size={14} /> Preview</button>
@@ -769,7 +769,7 @@ export default function AIDropshipping() {
 
           {section === 'pricing' && (
             <section className="ds-stack">
-              <div className="ds-section-head"><div><h2>Pricing calculator</h2><p>Calculate in {currency}; all AI imported items use a fixed 20% contribution margin after configured fees.</p></div></div>
+              <div className="ds-section-head"><div><h2>Pricing calculator</h2><p>Calculate in {currency}; all AI imported items use a fixed 35% contribution margin after configured fees.</p></div></div>
               <div className="ds-two-col ds-pricing-grid">
                 <section className="ds-panel" style={cardStyle}>
                   <div className="ds-panel-head"><div><h3>Known costs and fixed target</h3><p>Set fees from your actual processor and platform agreements.</p></div></div>
@@ -779,16 +779,16 @@ export default function AIDropshipping() {
                     <Field label="PAYMENT FEE (%) *" name="paymentFee" type="number" min="0" step="0.01" value={pricing.paymentFee} onChange={onPricingField} />
                     <Field label="PLATFORM FEE (%) *" name="platformFee" type="number" min="0" step="0.01" value={pricing.platformFee} onChange={onPricingField} />
                     <Field label={`AD COST PER UNIT (${currency})`} name="advertising" type="number" min="0" step="0.01" value={pricing.advertising} onChange={onPricingField} />
-                    <div className="ds-field"><span style={labelStyle}>FIXED AI CONTRIBUTION MARGIN</span><strong style={{ color: '#0f172a', fontSize: 18 }}>20%</strong><small>Applied to every AI imported item after configured fees.</small></div>
+                    <div className="ds-field"><span style={labelStyle}>FIXED AI CONTRIBUTION MARGIN</span><strong style={{ color: '#0f172a', fontSize: 18 }}>35%</strong><small>Applied to every AI imported item after configured fees.</small></div>
                     <Field label={`ROUND PRICE UP TO (${currency})`} name="rounding" type="number" min="0.01" step="0.01" value={pricing.rounding} onChange={onPricingField} />
                   </div>
                   <p className="ds-form-hint">Assumption: input costs share one currency. Tax, refunds, shipping subsidies, and other expenses are excluded unless added as costs. Set the real processor and platform fees in the backend pricing policy before publishing.</p>
                 </section>
                 <section className="ds-panel ds-price-result" style={cardStyle}>
-                  <div className="ds-panel-head"><div><h3>Price recommendation</h3><p>Target is a 20% contribution after listed costs and configured fees.</p></div></div>
+                  <div className="ds-panel-head"><div><h3>Price recommendation</h3><p>Target is a 35% contribution after listed costs and configured fees.</p></div></div>
                   {!pricingResult ? <div className="ds-empty">Enter unit cost, shipping, processor fee, and platform fee to calculate a price.</div> : (
                     <>
-                      <div className="ds-price-hero"><small>RECOMMENDED SELLING PRICE</small><strong>{format(toUsd(pricingResult.recommended))}</strong><span>Calculated in {currency} for a 20% margin; rounded up to your chosen increment.</span></div>
+                      <div className="ds-price-hero"><small>RECOMMENDED SELLING PRICE</small><strong>{format(toUsd(pricingResult.recommended))}</strong><span>Calculated in {currency} for a 35% margin; rounded up to your chosen increment.</span></div>
                       <div className="ds-price-lines"><div><span>Break-even price</span><b>{format(toUsd(pricingResult.breakEven))}</b></div><div><span>Known cost + per-unit ads</span><b>{format(toUsd(pricingResult.baseCost))}</b></div><div><span>Estimated contribution</span><b>{format(toUsd(pricingResult.grossProfit))}</b></div><div><span>Estimated contribution margin</span><b>{pricingResult.grossMargin.toFixed(1)}%</b></div><div><span>Variable fees</span><b>{(pricingResult.fees * 100).toFixed(2)}%</b></div></div>
                     </>
                   )}
