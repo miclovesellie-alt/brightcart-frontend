@@ -588,7 +588,7 @@ export default function HeroAssembler() {
             backdropFilter: 'blur(8px)',
             fontFamily: 'Inter, sans-serif',
           }}
-        >—</div>
+        >&nbsp;</div>
       </div>
 
       {/* Device name + specs */}
