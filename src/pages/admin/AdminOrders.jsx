@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { useCurrency } from '../../context/CurrencyContext';
 import { getOrderAmount, getOrderDate } from '../../utils/adminData';
-import { Search, X, Truck, Copy, CheckCheck, ExternalLink, WalletCards, PackageCheck } from 'lucide-react';
+import { Search, X, Truck, Copy, CheckCheck, ExternalLink, WalletCards, PackageCheck, Download } from 'lucide-react';
+import { downloadCsv } from '../../utils/csv';
 
 const STATUSES = ['All', 'Pending', 'Pending payment verification', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Canceled', 'Refunded'];
 const STATUS_COLORS = {
@@ -24,15 +25,15 @@ function formatDate(order, options = {}) {
 }
 
 export default function AdminOrders() {
-  const { orders = [], user, updateOrder, verifyPaystackOrder } = useStore();
+  const { orders = [], user, updateOrder, verifyPaystackOrder, pageParams } = useStore();
   const { format } = useCurrency();
   const [filter, setFilter] = useState('All');
   const [sortBy, setSortBy] = useState('newest');
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(() => pageParams?.search || '');
   const [selected, setSelected] = useState(null);
   const [copied, setCopied] = useState('');
   const [savingOrder, setSavingOrder] = useState('');
-  const [queueFilter, setQueueFilter] = useState('all');
+  const [queueFilter, setQueueFilter] = useState(() => pageParams?.queue || 'all');
   const [trackingForm, setTrackingForm] = useState({ tracking: '', trackingUrl: '' });
   const [error, setError] = useState('');
 
@@ -43,7 +44,7 @@ export default function AdminOrders() {
     return (getOrderDate(b)?.getTime() || 0) - (getOrderDate(a)?.getTime() || 0);
   });
   const filtered = allOrders.filter(order => {
-    const searchText = `${order.customer || ''} ${order.email || ''} ${order.id || ''}`.toLowerCase();
+    const searchText = `${order.customer || ''} ${order.email || ''} ${order.phone || ''} ${order.id || ''}`.toLowerCase();
     const queueMatch = queueFilter === 'all'
       || (queueFilter === 'payment' && order.paymentStatus === 'pending_verification')
       || (queueFilter === 'process' && order.status === 'Pending' && (order.paymentStatus === 'paid' || !String(order.paymentMethod || '').toLowerCase().includes('paystack')))
@@ -131,6 +132,12 @@ export default function AdminOrders() {
       </div>
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+        <button type="button" onClick={() => downloadCsv('shoppercart-orders.csv', filtered.map(order => ({
+          orderId: order.id, customer: order.customer, email: order.email, phone: order.phone,
+          date: formatDate(order), items: (order.items || []).map(item => `${item.qty || 1}x ${item.product?.name || 'Product'}${item.variant?.color ? ` (${item.variant.color})` : ''}`).join('; '),
+          total: getOrderAmount(order), status: order.status, paymentStatus: order.paymentStatus,
+          paymentReference: order.paymentReference, tracking: order.tracking, trackingUrl: order.trackingUrl,
+        })))} disabled={!filtered.length} style={{ padding: '8px 10px', display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 8, border: '1px solid rgba(255,255,255,.1)', background: 'rgba(255,255,255,.05)', color: '#e2e8f0', fontSize: 12, fontWeight: 700, cursor: filtered.length ? 'pointer' : 'not-allowed' }}><Download size={14} /> Export CSV</button>
         <select aria-label="Filter orders by status" value={filter} onChange={event => { setFilter(event.target.value); setQueueFilter('all'); }} style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12, color: '#374151', background: '#fff', cursor: 'pointer', minWidth: 200 }}>
           {STATUSES.map(status => <option key={status} value={status}>{status} ({counts[status]})</option>)}
         </select>

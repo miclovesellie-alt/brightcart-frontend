@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CheckCircle, CreditCard, MapPin, ClipboardCheck, Smartphone, ShieldCheck, Zap } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useCurrency } from '../context/CurrencyContext';
-import { payWithPaystack } from '../utils/paystack';
+import { api } from '../utils/api';
 import ProductImageGallery from '../components/ProductImageGallery';
 
 const STEPS = [
@@ -24,14 +24,21 @@ const fieldStyle = {
   boxSizing: 'border-box',
 };
 
+function makeCheckoutRequestId() {
+  return globalThis.crypto?.randomUUID?.() || `checkout_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+}
+
 export default function CheckoutPage() {
-  const { cart, cartTotal, placeOrder, navigate, user } = useStore();
-  const { format, currency, convert } = useCurrency();
+  const { cart, cartTotal, placeOrder, completePaystackCheckout, navigate, user } = useStore();
+  const { format, currency } = useCurrency();
   const [step, setStep] = useState(1);
   const [orderPlaced, setOrderPlaced] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('paystack'); // 'paystack' (MoMo/Card) or 'cash'
+  const checkoutRequestId = useRef(makeCheckoutRequestId());
+  const callbackParams = new URLSearchParams(window.location.search);
+  const callbackReference = callbackParams.get('reference') || callbackParams.get('trxref') || '';
 
   const [shipping, setShipping] = useState({
     name: user?.name || '',
@@ -49,12 +56,23 @@ export default function CheckoutPage() {
   
   // Paystack currency & amount calculation
   const paystackCurrency = ['GHS', 'NGN', 'USD', 'ZAR', 'KES'].includes(currency) ? currency : 'GHS';
-  const paystackAmount = convert(totalUSD, paystackCurrency);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const reference = params.get('reference') || params.get('trxref');
+    if (params.get('checkout') !== 'paystack' || !reference) return;
+    completePaystackCheckout(reference)
+      .then(order => {
+        setOrderPlaced(order);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      })
+      .catch(error => setCheckoutError(error.message || 'We could not confirm the payment yet. Keep your Paystack reference and try again.'));
+  }, [completePaystackCheckout]);
 
   const updateShipping = e => setShipping(p => ({ ...p, [e.target.name]: e.target.value }));
 
   // Paystack Flow trigger
-  const handlePaystackCheckout = () => {
+  const handlePaystackCheckout = async () => {
     if (!shipping.name || !shipping.email || !shipping.address) {
       setCheckoutError('Please fill in your shipping details first.');
       setStep(1);
@@ -64,33 +82,26 @@ export default function CheckoutPage() {
     setProcessing(true);
     setCheckoutError('');
 
-    payWithPaystack({
-      email: shipping.email,
-      amount: paystackAmount,
-      currency: paystackCurrency,
-      onSuccess: async (res) => {
-        try {
-          const order = await placeOrder({
-            ...shipping,
-            paymentMethod: 'Paystack (MoMo/Card)',
-            paymentRef: res.reference,
-            paymentCurrency: paystackCurrency,
-          });
-          setOrderPlaced(order);
-        } catch (error) {
-          setCheckoutError(`Payment callback received, but the order could not be saved. Keep reference ${res.reference} and contact support. ${error.message}`);
-        } finally {
-          setProcessing(false);
-        }
-      },
-      onClose: () => {
-        setProcessing(false);
-      },
-      onError: error => {
-        setCheckoutError(error);
-        setProcessing(false);
-      },
-    });
+    try {
+      const result = await api.initializePaystackPayment({
+        ...shipping,
+        customer: user?.name || shipping.name,
+        items: cart,
+        paymentMethod: 'Paystack (MoMo/Card)',
+        paymentCurrency: paystackCurrency,
+        checkoutRequestId: checkoutRequestId.current,
+      });
+      if (!result.authorizationUrl || new URL(result.authorizationUrl).hostname !== 'checkout.paystack.com') {
+        throw new Error('Paystack returned an invalid checkout link. Please try again.');
+      }
+      window.location.assign(result.authorizationUrl);
+    } catch (error) {
+      if (error.status === 409 || error.status === 422 || (error.status === 502 && error.message.includes('could not initialize this payment'))) {
+        checkoutRequestId.current = makeCheckoutRequestId();
+      }
+      setCheckoutError(error.message || 'Could not start secure payment. Please try again.');
+      setProcessing(false);
+    }
   };
 
   const handleManualOrder = async () => {
@@ -107,6 +118,16 @@ export default function CheckoutPage() {
     } finally {
       setProcessing(false);
     }
+  };
+
+  const retryPaymentVerification = async () => {
+    setProcessing(true);
+    setCheckoutError('');
+    try {
+      setOrderPlaced(await completePaystackCheckout(callbackReference));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } catch (error) { setCheckoutError(error.message || 'Payment verification is temporarily unavailable. Try again shortly.'); }
+    finally { setProcessing(false); }
   };
 
   if (orderPlaced) {
@@ -147,12 +168,30 @@ export default function CheckoutPage() {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#64748b', fontSize: '13px' }}>Total Amount:</span>
-              <span style={{ color: '#fff', fontWeight: 800, fontSize: '14px' }}>{format(totalUSD)}</span>
+              <span style={{ color: '#fff', fontWeight: 800, fontSize: '14px' }}>{format(orderPlaced.total ?? totalUSD)}</span>
             </div>
           </div>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
             <button onClick={() => navigate('account')} className="btn-ghost">View Orders</button>
             <button onClick={() => navigate('products')} className="btn-primary">Continue Shopping</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (callbackReference && !orderPlaced) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#0a0a0f', padding: 24 }}>
+        <div className="glass" style={{ width: 'min(100%, 480px)', borderRadius: 18, padding: 24, textAlign: 'center' }}>
+          <ShieldCheck size={34} color="#f97316" style={{ marginBottom: 10 }} />
+          <h1 style={{ color: '#fff', fontSize: 22 }}>Confirming your payment</h1>
+          <p style={{ color: '#94a3b8', fontSize: 13 }}>We verify every payment with Paystack before moving an order into fulfillment.</p>
+          {checkoutError && <div role="alert" style={{ padding: 12, borderRadius: 9, color: '#fecaca', background: 'rgba(239,68,68,.12)', fontSize: 12 }}>{checkoutError}</div>}
+          <p style={{ color: '#8892a4', fontSize: 12 }}>Paystack reference: <code style={{ color: '#fdba74', overflowWrap: 'anywhere' }}>{callbackReference}</code></p>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 18 }}>
+            <button className="btn-ghost" onClick={() => { window.history.replaceState({}, document.title, window.location.pathname); navigate('home'); }}>Continue shopping</button>
+            <button className="btn-primary" disabled={processing || !checkoutError} onClick={retryPaymentVerification}>{processing || !checkoutError ? 'Checking…' : 'Check again'}</button>
           </div>
         </div>
       </div>
@@ -181,7 +220,6 @@ export default function CheckoutPage() {
         {/* Progress Steps */}
         <div className="checkout-progress" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '32px', margin: '40px 0' }}>
           {STEPS.map((s, idx) => {
-            const Icon = s.icon;
             const isDone = step > s.id;
             const isActive = step === s.id;
             return (
@@ -432,7 +470,7 @@ export default function CheckoutPage() {
                       }}
                     >
                       <Zap size={18} fill="#fff" />
-                      {processing ? 'Launching Paystack…' : `Pay with MoMo / Card (${paystackCurrency} ${paystackAmount.toFixed(2)})`}
+                      {processing ? 'Opening secure checkout…' : 'Pay securely with MoMo / Card'}
                     </button>
                   ) : (
                     <button

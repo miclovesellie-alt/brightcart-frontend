@@ -263,6 +263,14 @@ export function StoreProvider({ children }) {
     return newOrder;
   }, [cart, user]);
 
+  const completePaystackCheckout = useCallback(async reference => {
+    const result = await api.verifyCheckoutPayment(reference);
+    const saved = result.data;
+    setOrders(prev => [saved, ...prev.filter(order => order.id !== saved.id)]);
+    if (saved.paymentStatus === 'paid') setCart([]);
+    return saved;
+  }, []);
+
   const acceptSession = useCallback((result) => {
     saveSession(result.token, result.user, result.expiresAt);
     setUserState(result.user);
@@ -409,6 +417,7 @@ export function StoreProvider({ children }) {
       removeFromCart,
       updateQty,
       placeOrder,
+      completePaystackCheckout,
       login,
       register,
       logout,

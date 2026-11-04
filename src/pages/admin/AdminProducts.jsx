@@ -4,7 +4,8 @@ import { useCurrency } from '../../context/CurrencyContext';
 import { isSampleProduct } from '../../utils/catalog';
 import { categoryLabel, categorySlug, getProductImages } from '../../utils/productImages';
 import ProductImageGallery from '../../components/ProductImageGallery';
-import { Search, Plus, Edit2, Trash2, X, ImagePlus } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, X, ImagePlus, Download } from 'lucide-react';
+import { downloadCsv } from '../../utils/csv';
 
 const CATEGORIES = [
   { label: 'Phones', slug: 'phones' },
@@ -58,11 +59,12 @@ function roundCurrencyAmount(amount, currency) {
 }
 
 export default function AdminProducts() {
-  const { adminProducts: products, addProduct, updateProduct, deleteProduct } = useStore();
+  const { adminProducts: products, addProduct, updateProduct, deleteProduct, pageParams } = useStore();
   const { format, currency: preferredCurrency, convert, convertBetween, CURRENCIES } = useCurrency();
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(() => pageParams?.search || '');
   const [cat, setCat] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [stockFilter, setStockFilter] = useState(() => pageParams?.stock || 'all');
   const [sortBy, setSortBy] = useState('name');
   const [showModal, setShowModal] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
@@ -79,8 +81,9 @@ export default function AdminProducts() {
   const filtered = realProducts.filter(product => {
     const matchCat = cat === 'All' || product.category === cat;
     const matchStatus = statusFilter === 'All' || (product.status || 'Active') === statusFilter;
-    const matchQ = product.name.toLowerCase().includes(search.toLowerCase());
-    return matchCat && matchStatus && matchQ;
+    const matchStock = stockFilter !== 'low' || Number(product.stock ?? 0) < 5;
+    const matchQ = `${product.name || ''} ${product.sku || ''} ${String(product.category || '').replace(/[-_]/g, ' ')}`.toLowerCase().includes(search.toLowerCase());
+    return matchCat && matchStatus && matchStock && matchQ;
   }).sort((a, b) => {
     if (sortBy === 'price-asc') return Number(a.price || 0) - Number(b.price || 0);
     if (sortBy === 'price-desc') return Number(b.price || 0) - Number(a.price || 0);
@@ -220,6 +223,13 @@ export default function AdminProducts() {
           <h2 style={{ fontWeight: 800, fontSize: 18, color: '#0f172a', margin: 0 }}>Products</h2>
           <p style={{ color: '#64748b', fontSize: 12, margin: '2px 0 0' }}>{realProducts.length} products &mdash; {filtered.length} shown</p>
         </div>
+        <button onClick={() => downloadCsv('shoppercart-products.csv', filtered.map(product => ({
+          name: product.name, sku: product.sku, category: categoryLabel(product.category),
+          price: product.price, currency: product.inputCurrency || 'USD', comparePrice: product.originalPrice,
+          stock: product.stock, status: product.status || 'Active', featured: Boolean(product.featured),
+        })))} disabled={!filtered.length} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 12px', background: 'rgba(255,255,255,.05)', color: '#e2e8f0', border: '1px solid rgba(255,255,255,.1)', borderRadius: 9, fontWeight: 700, fontSize: 12, cursor: filtered.length ? 'pointer' : 'not-allowed', opacity: filtered.length ? 1 : .5 }}>
+          <Download size={14} /> Export CSV
+        </button>
         <button onClick={openNew} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', background: '#f97316', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
           <Plus size={15} /> Add Product
         </button>
@@ -237,6 +247,9 @@ export default function AdminProducts() {
         <select aria-label="Filter products by status" value={statusFilter} onChange={event => setStatusFilter(event.target.value)} style={{ ...inp, width: 'auto', minWidth: 135, padding: '8px 10px', fontSize: 12, cursor: 'pointer' }}>
           <option value="All">All statuses</option>
           {STATUS_OPTIONS.map(status => <option key={status} value={status}>{status}</option>)}
+        </select>
+        <select aria-label="Filter products by stock level" value={stockFilter} onChange={event => setStockFilter(event.target.value)} style={{ ...inp, width: 'auto', minWidth: 130, padding: '8px 10px', fontSize: 12, cursor: 'pointer' }}>
+          <option value="all">All stock levels</option><option value="low">Low stock (&lt; 5)</option>
         </select>
         <select aria-label="Sort products" value={sortBy} onChange={event => setSortBy(event.target.value)} style={{ ...inp, width: 'auto', minWidth: 150, padding: '8px 10px', fontSize: 12, cursor: 'pointer' }}>
           <option value="name">Name A–Z</option><option value="price-asc">Price: low to high</option><option value="price-desc">Price: high to low</option><option value="stock-asc">Stock: low to high</option><option value="stock-desc">Stock: high to low</option>

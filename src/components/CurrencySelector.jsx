@@ -91,9 +91,9 @@ export default function CurrencySelector({ theme = 'dark' }) {
                     width: '100%', display: 'flex', alignItems: 'center', gap: 10,
                     padding: '8px 14px', border: 'none', cursor: 'pointer', textAlign: 'left',
                     background: active
-                      ? (isDark ? 'rgba(79,142,247,0.15)' : '#eff6ff')
+                      ? (isDark ? 'rgba(249,115,22,0.15)' : '#eff6ff')
                       : 'transparent',
-                    borderLeft: active ? `3px solid #4f8ef7` : '3px solid transparent',
+                    borderLeft: active ? `3px solid ${isDark ? '#f97316' : '#4f8ef7'}` : '3px solid transparent',
                     transition: 'background 0.1s',
                   }}
                   onMouseEnter={e => { if (!active) e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc'; }}

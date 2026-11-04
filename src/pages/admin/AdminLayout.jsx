@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   LayoutDashboard, Package, ShoppingBag, Users, BarChart2,
-  Settings, LogOut, Menu, X, Truck, Bell, Search, Sparkles,
+  Settings, LogOut, Menu, Truck, Bell, Search, Sparkles,
   ChevronRight, Store, UserCheck, ShieldCheck, Shield, Eye,
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
@@ -9,6 +9,7 @@ import CurrencySelector from '../../components/CurrencySelector';
 import PageBackButton from '../../components/PageBackButton';
 import BrandLogo from '../../components/BrandLogo';
 import { isSampleProduct } from '../../utils/catalog';
+import './admin-theme.css';
 
 const ALL_NAV = [
   { label: 'Dashboard',  icon: LayoutDashboard, page: 'admin-dashboard',  badge: null,  roles: ['super_admin','admin','moderator'] },
@@ -32,6 +33,8 @@ export default function AdminLayout({ children, activePage }) {
   const { navigate, logout, user, orders = [], adminProducts = [] } = useStore();
   const [open, setOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const userRole = user?.role || 'moderator';
   const NAV = ALL_NAV.filter(item => item.roles.includes(userRole));
@@ -40,14 +43,31 @@ export default function AdminLayout({ children, activePage }) {
   const awaitingFulfillment = orders.filter(order => ['pending', 'processing'].includes(String(order.status || '').toLowerCase())).length;
   const lowStock = adminProducts.filter(product => !isSampleProduct(product) && product.status !== 'Draft' && Number(product.stock ?? 0) < 5).length;
   const notifications = [
-    ...(awaitingPayment ? [{ text: `${awaitingPayment} order${awaitingPayment === 1 ? '' : 's'} need payment verification`, dot: '#f59e0b' }] : []),
-    ...(awaitingFulfillment ? [{ text: `${awaitingFulfillment} order${awaitingFulfillment === 1 ? '' : 's'} awaiting fulfillment`, dot: '#3b82f6' }] : []),
-    ...(lowStock ? [{ text: `${lowStock} product${lowStock === 1 ? '' : 's'} below 5 units of stock`, dot: '#ef4444' }] : []),
+    ...(awaitingPayment ? [{ text: `${awaitingPayment} order${awaitingPayment === 1 ? '' : 's'} need payment verification`, dot: '#f59e0b', page: 'admin-orders', params: { queue: 'payment' } }] : []),
+    ...(awaitingFulfillment ? [{ text: `${awaitingFulfillment} order${awaitingFulfillment === 1 ? '' : 's'} awaiting fulfillment`, dot: '#3b82f6', page: 'admin-orders', params: { queue: 'process' } }] : []),
+    ...(lowStock ? [{ text: `${lowStock} product${lowStock === 1 ? '' : 's'} below 5 units of stock`, dot: '#ef4444', page: 'admin-products', params: { stock: 'low' } }] : []),
   ];
   const orderBadge = awaitingPayment + awaitingFulfillment;
+  const normalizedSearch = search.trim().toLowerCase();
+  const canSearchProducts = NAV.some(item => item.page === 'admin-products');
+  const searchResults = normalizedSearch ? [
+    ...(canSearchProducts ? adminProducts.filter(product => !isSampleProduct(product)
+      && `${product.name || ''} ${product.sku || ''} ${String(product.category || '').replace(/[-_]/g, ' ')}`.toLowerCase().includes(normalizedSearch))
+      .slice(0, 4).map(product => ({ page: 'admin-products', label: product.name, detail: `Product · ${product.sku || product.category || 'Catalog'}` })) : []),
+    ...orders.filter(order => `${order.id || ''} ${order.customer || ''} ${order.email || ''} ${order.phone || ''}`.toLowerCase().includes(normalizedSearch))
+      .slice(0, 4).map(order => ({ page: 'admin-orders', label: order.id || 'Order', detail: `${order.customer || 'Customer'} · ${order.status || 'Pending'}` })),
+    ...orders.filter(order => `${order.customer || ''} ${order.email || ''} ${order.phone || ''}`.toLowerCase().includes(normalizedSearch))
+      .filter((order, index, list) => list.findIndex(item => String(item.email || item.customer).toLowerCase() === String(order.email || order.customer).toLowerCase()) === index)
+      .slice(0, 3).map(order => ({ page: 'admin-customers', label: order.customer || order.email || 'Customer', detail: `Customer · ${order.email || order.phone || 'Order contact'}` })),
+  ].slice(0, 8) : [];
+  const goToSearchResult = result => {
+    navigate(result.page, { search: search.trim() });
+    setSearchOpen(false);
+    setOpen(false);
+  };
 
-  const Sidebar = () => (
-    <div style={{ display:'flex', flexDirection:'column', height:'100%', background:'#0b1222' }}>
+  const renderSidebar = () => (
+    <div style={{ display:'flex', flexDirection:'column', height:'100%', background:'#0a0a0f' }}>
       {/* Logo */}
       <div style={{ padding:'20px 20px 16px', borderBottom:'1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-start', gap:3 }}>
@@ -107,10 +127,10 @@ export default function AdminLayout({ children, activePage }) {
   );
 
   return (
-    <div className="admin-layout" style={{ display:'flex', width:'100%', maxWidth:'100%', minWidth:0, height:'100vh', overflow:'hidden', background:'#f0f4f8', fontFamily:'Inter,system-ui,sans-serif' }}>
+    <div className="admin-layout" style={{ display:'flex', width:'100%', maxWidth:'100%', minWidth:0, height:'100vh', overflow:'hidden', background:'#0a0a0f', fontFamily:'Inter,system-ui,sans-serif' }}>
       {/* Desktop Sidebar */}
       <aside style={{ width:210, flexShrink:0, display:'flex', flexDirection:'column', overflowY:'auto' }} className="hidden-mobile">
-        <Sidebar />
+        {renderSidebar()}
       </aside>
 
       {/* Mobile Sidebar */}
@@ -118,7 +138,7 @@ export default function AdminLayout({ children, activePage }) {
         <div style={{ position:'fixed', inset:0, zIndex:100 }}>
           <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.55)' }} onClick={() => setOpen(false)} />
           <aside style={{ position:'absolute', left:0, top:0, height:'100%', width:'min(220px, 100vw)', overflowY:'auto' }}>
-            <Sidebar />
+            {renderSidebar()}
           </aside>
         </div>
       )}
@@ -126,7 +146,7 @@ export default function AdminLayout({ children, activePage }) {
       {/* Main */}
       <div style={{ flex:1, display:'flex', flexDirection:'column', minWidth:0, overflow:'hidden' }}>
         {/* Top Bar */}
-        <header className="admin-topbar" style={{ display:'flex', alignItems:'center', gap:12, padding:'0 20px', height:58, background:'#fff', borderBottom:'1px solid #e2e8f0', flexShrink:0 }}>
+        <header className="admin-topbar" style={{ display:'flex', alignItems:'center', gap:12, padding:'0 20px', height:58, background:'#0a0a0f', borderBottom:'1px solid rgba(255,255,255,.08)', flexShrink:0 }}>
           <button className="admin-topbar-hamburger" aria-label={open ? 'Close admin navigation' : 'Open admin navigation'} aria-expanded={open} onClick={() => setOpen(value => !value)} style={{ padding:6, borderRadius:8, background:'#f1f5f9', border:'none', cursor:'pointer', display:'flex', flexShrink:0 }}>
             <Menu size={18} color="#64748b" />
           </button>
@@ -134,43 +154,55 @@ export default function AdminLayout({ children, activePage }) {
 
           {/* Page title */}
           <div className="admin-topbar-heading">
-            <div style={{ fontWeight:700, fontSize:15, color:'#0f172a' }}>
+            <div style={{ fontWeight:700, fontSize:15, color:'#f8fafc' }}>
               {ALL_NAV.find(n => n.page === activePage)?.label || 'Admin'}
             </div>
-            <div style={{ fontSize:11, color:'#94a3b8' }}>Store administration</div>
+            <div style={{ fontSize:11, color:'#8892a4' }}>Store administration</div>
           </div>
 
           {/* Search */}
           <div className="admin-topbar-search" style={{ flex:1, maxWidth:360, margin:'0 16px', position:'relative' }}>
             <Search size={14} color="#94a3b8" style={{ position:'absolute', left:11, top:'50%', transform:'translateY(-50%)' }} />
             <input
+              value={search}
+              onFocus={() => setSearchOpen(true)}
+              onChange={event => { setSearch(event.target.value); setSearchOpen(true); }}
+              onKeyDown={event => {
+                if (event.key === 'Escape') setSearchOpen(false);
+                if (event.key === 'Enter' && searchResults[0]) goToSearchResult(searchResults[0]);
+              }}
               placeholder="Search orders, products, customers…"
-              style={{ width:'100%', padding:'7px 12px 7px 32px', borderRadius:8, border:'1px solid #e2e8f0', background:'#f8fafc', fontSize:12, color:'#0f172a', outline:'none', boxSizing:'border-box' }}
+              style={{ width:'100%', padding:'7px 12px 7px 32px', borderRadius:8, border:'1px solid rgba(255,255,255,.1)', background:'rgba(255,255,255,.04)', fontSize:12, color:'#f8fafc', outline:'none', boxSizing:'border-box' }}
             />
+            {searchOpen && normalizedSearch && <div className="admin-search-results" role="listbox">
+              {searchResults.length ? searchResults.map((result, index) => <button key={`${result.page}-${result.label}-${index}`} type="button" role="option" aria-selected="false" onMouseDown={event => event.preventDefault()} onClick={() => goToSearchResult(result)}>
+                <span>{result.label}</span><small>{result.detail}</small>
+              </button>) : <div className="admin-search-empty">No matching products, orders, or customers.</div>}
+            </div>}
           </div>
 
           <div className="admin-topbar-actions" style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:12, flexShrink:0 }}>
             {/* Currency Selector */}
-            <div className="admin-topbar-currency"><CurrencySelector theme="light" /></div>
+            <div className="admin-topbar-currency"><CurrencySelector theme="dark" /></div>
             {/* Notifications */}
             <div style={{ position:'relative' }}>
               <button
                 onClick={() => setNotifOpen(v => !v)}
-                style={{ position:'relative', padding:7, borderRadius:8, background:'#f1f5f9', border:'none', cursor:'pointer', display:'flex' }}
+                style={{ position:'relative', padding:7, borderRadius:8, background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.08)', cursor:'pointer', display:'flex' }}
               >
-                <Bell size={17} color="#64748b" />
-                {notifications.length > 0 && <span style={{ position:'absolute', top:4, right:4, width:7, height:7, borderRadius:'50%', background:'#ef4444', border:'2px solid #fff' }} />}
+                <Bell size={17} color="#94a3b8" />
+                {notifications.length > 0 && <span style={{ position:'absolute', top:4, right:4, width:7, height:7, borderRadius:'50%', background:'#f97316', border:'2px solid #0a0a0f' }} />}
               </button>
               {notifOpen && (
-                <div style={{ position:'absolute', right:0, top:44, width:300, background:'#fff', borderRadius:12, border:'1px solid #e2e8f0', boxShadow:'0 8px 30px rgba(0,0,0,0.12)', zIndex:50, overflow:'hidden' }}>
-                  <div style={{ padding:'12px 16px', borderBottom:'1px solid #f1f5f9' }}><span style={{ fontWeight:700, fontSize:13, color:'#0f172a' }}>Store alerts</span></div>
+                <div className="admin-notification-popover" style={{ position:'absolute', right:0, top:44, width:300, background:'#111118', borderRadius:12, border:'1px solid rgba(255,255,255,.1)', boxShadow:'0 8px 30px rgba(0,0,0,0.5)', zIndex:50, overflow:'hidden' }}>
+                  <div style={{ padding:'12px 16px', borderBottom:'1px solid rgba(255,255,255,.08)' }}><span style={{ fontWeight:700, fontSize:13, color:'#f8fafc' }}>Store alerts</span></div>
                   {notifications.length ? notifications.map((n, i) => (
-                    <div key={i} style={{ padding:'10px 16px', borderBottom:'1px solid #f8fafc', display:'flex', gap:10, alignItems:'flex-start' }}>
+                      <button key={i} type="button" onClick={() => { navigate(n.page, n.params); setNotifOpen(false); }} style={{ width:'100%', padding:'10px 16px', border:0, borderBottom:'1px solid rgba(255,255,255,.06)', background:'transparent', display:'flex', gap:10, alignItems:'flex-start', textAlign:'left', cursor:'pointer' }}>
                       <div style={{ width:7, height:7, borderRadius:'50%', background:n.dot, marginTop:5, flexShrink:0 }} />
                       <div>
-                        <div style={{ fontSize:12, color:'#374151', lineHeight:1.4 }}>{n.text}</div>
+                        <div style={{ fontSize:12, color:'#cbd5e1', lineHeight:1.4 }}>{n.text}</div>
                       </div>
-                    </div>
+                    </button>
                   )) : <div style={{ padding:'14px 16px', fontSize:12, color:'#64748b' }}>No payment, fulfillment, or stock alerts.</div>}
                 </div>
               )}
@@ -178,11 +210,11 @@ export default function AdminLayout({ children, activePage }) {
 
             {/* Avatar */}
             <div className="admin-topbar-user" style={{ display:'flex', alignItems:'center', gap:8 }}>
-              <div style={{ width:32, height:32, borderRadius:'50%', background:'linear-gradient(135deg,#2563eb,#7c3aed)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, color:'#fff', fontSize:13 }}>
+              <div style={{ width:32, height:32, borderRadius:'50%', background:'linear-gradient(135deg,#f97316,#c2410c)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, color:'#fff', fontSize:13 }}>
                 {(user?.name || 'A')[0].toUpperCase()}
               </div>
               <div className="admin-topbar-user-copy" style={{ lineHeight:1.2 }}>
-                <div style={{ fontSize:12, fontWeight:600, color:'#0f172a' }}>{user?.name || 'Admin'}</div>
+                <div style={{ fontSize:12, fontWeight:600, color:'#f8fafc' }}>{user?.name || 'Admin'}</div>
                 <div style={{ display:'flex', alignItems:'center', gap:4 }}>
                   <span style={{ fontSize:9, fontWeight:700, padding:'1px 7px', borderRadius:20, background: roleMeta.bg, color: roleMeta.color }}>
                     {roleMeta.label}
@@ -194,7 +226,7 @@ export default function AdminLayout({ children, activePage }) {
         </header>
 
         {/* Content */}
-        <main className="admin-page-content" style={{ flex:1, minWidth:0, overflowY:'auto', padding:'20px' }}>
+        <main className="admin-page-content" style={{ flex:1, minWidth:0, overflowY:'auto', padding:'20px', background:'#0a0a0f' }}>
           {children}
         </main>
       </div>

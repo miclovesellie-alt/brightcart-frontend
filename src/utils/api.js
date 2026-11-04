@@ -60,6 +60,8 @@ export const api = {
   async getOrders() { return request('/admin/orders'); },
   async getAccountOrders() { return request('/account/orders'); },
   async placeOrder(order) { return request('/orders', { method: 'POST', body: body(order) }); },
+  async initializePaystackPayment(order) { return request('/payments/paystack/initialize', { method: 'POST', body: body(order) }); },
+  async verifyCheckoutPayment(reference) { return request('/payments/paystack/verify', { method: 'POST', auth: false, body: body({ reference }) }); },
   async updateOrder(id, patch) { return request(`/admin/orders/${encodeURIComponent(id)}`, { method: 'PATCH', body: body(patch) }); },
   async verifyPaystackOrder(id) { return request(`/admin/orders/${encodeURIComponent(id)}/verify-paystack`, { method: 'POST', body: body({}) }); },
 

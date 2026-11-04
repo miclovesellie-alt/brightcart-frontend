@@ -2,18 +2,20 @@ import { useMemo, useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import { useCurrency } from '../../context/CurrencyContext';
 import { aggregateCustomers, getOrderAmount, getOrderDate, isPaidOrder } from '../../utils/adminData';
-import { Search, Mail, Phone, MapPin, X } from 'lucide-react';
+import { Search, Mail, Phone, MapPin, X, Download } from 'lucide-react';
+import { downloadCsv } from '../../utils/csv';
 
 function displayDate(date) {
   return date ? date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
 }
 
 export default function AdminCustomers() {
-  const { orders = [] } = useStore();
+  const { orders = [], pageParams } = useStore();
   const { format } = useCurrency();
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(() => pageParams?.search || '');
   const [sortBy, setSortBy] = useState('spend');
   const [selected, setSelected] = useState(null);
+
 
   const customers = useMemo(() => aggregateCustomers(orders).map(customer => ({
     ...customer,
@@ -46,6 +48,11 @@ export default function AdminCustomers() {
       </div>
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+        <button type="button" onClick={() => downloadCsv('shoppercart-customers.csv', filtered.map(customer => ({
+          name: customer.name, email: customer.email, phone: customer.phone, country: customer.country,
+          orderCount: customer.orders.length, verifiedPaidSpend: customer.paidSpend,
+          firstOrder: displayDate(customer.firstOrderDate), lastOrder: displayDate(getOrderDate(customer.latestOrder)),
+        })))} disabled={!filtered.length} style={{ padding: '7px 10px', display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 8, border: '1px solid rgba(255,255,255,.1)', background: 'rgba(255,255,255,.05)', color: '#e2e8f0', fontSize: 11, fontWeight: 700, cursor: filtered.length ? 'pointer' : 'not-allowed' }}><Download size={13} /> Export CSV</button>
         <div style={{ position: 'relative', flex: 1, minWidth: 200 }}><Search size={13} color="#94a3b8" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search real order contacts…" style={{ width: '100%', padding: '7px 12px 7px 30px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12, outline: 'none', boxSizing: 'border-box' }} /></div>
         <select value={sortBy} onChange={event => setSortBy(event.target.value)} style={{ padding: '7px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 11, color: '#374151', background: '#fff', cursor: 'pointer' }}><option value="spend">Sort: Paid spend</option><option value="orders">Sort: Order count</option><option value="name">Sort: Name A–Z</option></select>
       </div>

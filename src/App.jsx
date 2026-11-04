@@ -33,7 +33,7 @@ const PAGE_ROLES = {
 };
 
 function AppContent() {
-  const { page, user, navigate } = useStore();
+  const { page, pageParams, user, navigate } = useStore();
 
   const isAdmin = ADMIN_PAGES.includes(page);
 
@@ -67,7 +67,7 @@ function AppContent() {
     };
 
     return (
-      <AdminLayout activePage={activePage}>
+      <AdminLayout key={`${activePage}:${JSON.stringify(pageParams || {})}`} activePage={activePage}>
         {renderAdminPage()}
       </AdminLayout>
     );
