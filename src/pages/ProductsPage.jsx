@@ -3,7 +3,7 @@ import { useStore } from '../context/StoreContext';
 import { useCurrency } from '../context/CurrencyContext';
 import ProductImageGallery from '../components/ProductImageGallery';
 import { categoryLabel } from '../utils/productImages';
-import { Search, Star, ShoppingCart, Filter, ChevronDown } from 'lucide-react';
+import { Search, Star, ShoppingCart } from 'lucide-react';
 
 const CATEGORIES = [
   { label: 'All', value: 'all' },
@@ -84,6 +84,8 @@ function ProductCard({ product, onClick }) {
         display: 'flex',
         flexDirection: 'column',
         gap: '14px',
+        height: '100%',
+        boxSizing: 'border-box',
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = 'rgba(79,142,247,0.3)';
@@ -98,9 +100,10 @@ function ProductCard({ product, onClick }) {
     >
       <ProductImageGallery product={product} alt={product.name} className="product-img-wrap" style={{ height: '200px', background: '#111118', borderRadius: '8px' }} imageStyle={{ padding: '12px', transition: 'transform 0.4s ease' }} />
 
-      {tagLabel && (
+      {tagLabel ? (
         <span style={{
           alignSelf: 'flex-start',
+          minHeight: '18px',
           padding: '3px 10px',
           borderRadius: '100px',
           fontSize: '11px',
@@ -116,7 +119,7 @@ function ProductCard({ product, onClick }) {
         }}>
           {tagLabel}
         </span>
-      )}
+      ) : <span aria-hidden="true" style={{ minHeight: '18px' }} />}
 
       <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#fff', lineHeight: 1.4 }}>
         <button
@@ -149,6 +152,7 @@ function ProductCard({ product, onClick }) {
         onClick={handleAddToCart}
         style={{
           width: '100%',
+          marginTop: 'auto',
           padding: '10px',
           background: added ? 'rgba(34,197,94,0.2)' : '#4f8ef7',
           border: 'none',
@@ -190,7 +194,6 @@ export default function ProductsPage() {
   const [sortBy, setSortBy] = useState('featured');
   const [search, setSearch] = useState('');
   const [visibleCount, setVisibleCount] = useState(12);
-  const [sortOpen, setSortOpen] = useState(false);
   const categories = [
     ...CATEGORIES,
     ...[...new Set(products.map(product => product.category).filter(Boolean))]
@@ -269,90 +272,22 @@ export default function ProductsPage() {
             />
           </div>
 
-          {/* Category Pills */}
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {categories.map(cat => (
-              <button
-                key={cat.value}
-                onClick={() => { setActiveCategory(cat.value); setVisibleCount(12); }}
-                style={{
-                  padding: '7px 14px',
-                  borderRadius: '100px',
-                  border: '1px solid',
-                  borderColor: activeCategory === cat.value ? '#4f8ef7' : 'rgba(255,255,255,0.1)',
-                  background: activeCategory === cat.value ? 'rgba(79,142,247,0.15)' : 'transparent',
-                  color: activeCategory === cat.value ? '#4f8ef7' : 'rgba(255,255,255,0.6)',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Sort */}
-          <div style={{ position: 'relative', marginLeft: 'auto' }}>
-            <button
-              onClick={() => setSortOpen(!sortOpen)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '9px 14px',
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '8px',
-                color: 'rgba(255,255,255,0.7)',
-                fontSize: '13px',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              <Filter size={13} />
-              {SORT_OPTIONS.find(o => o.value === sortBy)?.label}
-              <ChevronDown size={12} />
-            </button>
-            {sortOpen && (
-              <div style={{
-                position: 'absolute',
-                top: '100%',
-                right: 0,
-                marginTop: '8px',
-                background: '#111118',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '10px',
-                padding: '8px',
-                minWidth: '200px',
-                zIndex: 100,
-                boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
-              }}>
-                {SORT_OPTIONS.map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => { setSortBy(opt.value); setSortOpen(false); }}
-                    style={{
-                      display: 'block',
-                      width: '100%',
-                      padding: '9px 14px',
-                      background: sortBy === opt.value ? 'rgba(79,142,247,0.1)' : 'none',
-                      border: 'none',
-                      color: sortBy === opt.value ? '#4f8ef7' : 'rgba(255,255,255,0.7)',
-                      fontSize: '13px',
-                      cursor: 'pointer',
-                      borderRadius: '6px',
-                      textAlign: 'left',
-                    }}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <select
+            aria-label="Filter products by category"
+            value={activeCategory}
+            onChange={event => { setActiveCategory(event.target.value); setVisibleCount(12); }}
+            style={{ padding: '9px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '13px', cursor: 'pointer', minWidth: '160px' }}
+          >
+            {categories.map(cat => <option key={cat.value} value={cat.value} style={{ background: '#111118' }}>{cat.label}</option>)}
+          </select>
+          <select
+            aria-label="Sort products"
+            value={sortBy}
+            onChange={event => setSortBy(event.target.value)}
+            style={{ marginLeft: 'auto', padding: '9px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '13px', cursor: 'pointer', minWidth: '180px' }}
+          >
+            {SORT_OPTIONS.map(option => <option key={option.value} value={option.value} style={{ background: '#111118' }}>{option.label}</option>)}
+          </select>
         </div>
 
         {/* Grid */}
@@ -360,6 +295,8 @@ export default function ProductsPage() {
           <div className="products-grid" style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            gridAutoRows: '1fr',
+            alignItems: 'stretch',
             gap: '24px',
           }}>
             {[...Array(12)].map((_, i) => <SkeletonCard key={i} />)}
@@ -375,6 +312,8 @@ export default function ProductsPage() {
               <div className="products-grid" style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                gridAutoRows: '1fr',
+                alignItems: 'stretch',
                 gap: '24px',
               }}>
                 {visible.map(product => (

@@ -74,6 +74,10 @@ export default function AdminUsers() {
   const [addErrors, setAddErrors] = useState({});
   const [pwdForm, setPwdForm] = useState({ newPwd: '', confirmPwd: '' });
   const [pwdErrors, setPwdErrors] = useState({});
+  const [teamSearch, setTeamSearch] = useState('');
+  const [teamRoleFilter, setTeamRoleFilter] = useState('all');
+  const [teamStatusFilter, setTeamStatusFilter] = useState('all');
+  const [teamSort, setTeamSort] = useState('name');
 
   function showToast(msg, type = 'success') {
     setToast({ msg, type });
@@ -124,6 +128,12 @@ export default function AdminUsers() {
   const totalAdmins     = adminUsers.filter(a => a.role === 'admin').length;
   const totalMods       = adminUsers.filter(a => a.role === 'moderator').length;
   const totalActive     = adminUsers.filter(a => a.status === 'Active').length;
+  const visibleTeam = adminUsers.filter(admin => {
+    const query = teamSearch.trim().toLowerCase();
+    return (!query || `${admin.name || ''} ${admin.email || ''}`.toLowerCase().includes(query))
+      && (teamRoleFilter === 'all' || admin.role === teamRoleFilter)
+      && (teamStatusFilter === 'all' || admin.status === teamStatusFilter);
+  }).sort((a, b) => teamSort === 'role' ? String(a.role).localeCompare(String(b.role)) : String(a.name || '').localeCompare(String(b.name || '')));
 
   if (!isSuperAdmin) {
     return (
@@ -197,6 +207,12 @@ export default function AdminUsers() {
           <span style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>Team Members</span>
           <span style={{ marginLeft: 'auto', fontSize: 11, color: '#94a3b8' }}>{adminUsers.length} member{adminUsers.length !== 1 ? 's' : ''}</span>
         </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 9, padding: '12px 16px', borderBottom: '1px solid #f1f5f9' }}>
+          <input aria-label="Search team members" value={teamSearch} onChange={event => setTeamSearch(event.target.value)} placeholder="Search name or email…" style={{ minWidth: 0, padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 12 }} />
+          <select aria-label="Filter team by role" value={teamRoleFilter} onChange={event => setTeamRoleFilter(event.target.value)} style={{ minWidth: 0, padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', color: '#374151', fontSize: 12 }}><option value="all">All roles</option><option value="super_admin">Super Admin</option><option value="admin">Admin</option><option value="moderator">Moderator</option></select>
+          <select aria-label="Filter team by status" value={teamStatusFilter} onChange={event => setTeamStatusFilter(event.target.value)} style={{ minWidth: 0, padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', color: '#374151', fontSize: 12 }}><option value="all">All statuses</option><option value="Active">Active</option><option value="Disabled">Disabled</option></select>
+          <select aria-label="Sort team members" value={teamSort} onChange={event => setTeamSort(event.target.value)} style={{ minWidth: 0, padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', color: '#374151', fontSize: 12 }}><option value="name">Name A–Z</option><option value="role">Role</option></select>
+        </div>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
@@ -207,7 +223,7 @@ export default function AdminUsers() {
               </tr>
             </thead>
             <tbody>
-              {adminUsers.map((admin) => {
+              {visibleTeam.map((admin) => {
                 const isMe = admin.email === user.email;
                 return (
                   <tr
@@ -294,6 +310,7 @@ export default function AdminUsers() {
                   </tr>
                 );
               })}
+              {!visibleTeam.length && <tr><td colSpan={6} style={{ padding: 32, textAlign: 'center', color: '#94a3b8' }}>No team members match these filters.</td></tr>}
             </tbody>
           </table>
         </div>

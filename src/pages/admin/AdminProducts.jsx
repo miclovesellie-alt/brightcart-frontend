@@ -62,6 +62,8 @@ export default function AdminProducts() {
   const { format, currency: preferredCurrency, convert, convertBetween, CURRENCIES } = useCurrency();
   const [search, setSearch] = useState('');
   const [cat, setCat] = useState('All');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [sortBy, setSortBy] = useState('name');
   const [showModal, setShowModal] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -76,8 +78,15 @@ export default function AdminProducts() {
   }, [realProducts]);
   const filtered = realProducts.filter(product => {
     const matchCat = cat === 'All' || product.category === cat;
+    const matchStatus = statusFilter === 'All' || (product.status || 'Active') === statusFilter;
     const matchQ = product.name.toLowerCase().includes(search.toLowerCase());
-    return matchCat && matchQ;
+    return matchCat && matchStatus && matchQ;
+  }).sort((a, b) => {
+    if (sortBy === 'price-asc') return Number(a.price || 0) - Number(b.price || 0);
+    if (sortBy === 'price-desc') return Number(b.price || 0) - Number(a.price || 0);
+    if (sortBy === 'stock-asc') return Number(a.stock || 0) - Number(b.stock || 0);
+    if (sortBy === 'stock-desc') return Number(b.stock || 0) - Number(a.stock || 0);
+    return a.name.localeCompare(b.name);
   });
 
   const openNew = () => { setForm({ ...EMPTY_FORM, currency: preferredCurrency, images: [''] }); setEditProduct(null); setFormError(''); setShowModal(true); };
@@ -221,11 +230,17 @@ export default function AdminProducts() {
           <Search size={13} color="#94a3b8" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
           <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search products..." style={{ width: '100%', padding: '8px 12px 8px 30px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12, color: '#0f172a', outline: 'none', boxSizing: 'border-box' }} />
         </div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {[{ label: 'All', slug: 'All' }, ...categories].map(({ label, slug }) => (
-            <button key={slug} onClick={() => setCat(slug)} style={{ padding: '6px 14px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', background: cat === slug ? '#2563eb' : '#fff', color: cat === slug ? '#fff' : '#374151', border: `1px solid ${cat === slug ? '#2563eb' : '#e2e8f0'}` }}>{label}</button>
-          ))}
-        </div>
+        <select aria-label="Filter products by category" value={cat} onChange={event => setCat(event.target.value)} style={{ ...inp, width: 'auto', minWidth: 155, padding: '8px 10px', fontSize: 12, cursor: 'pointer' }}>
+          <option value="All">All categories</option>
+          {categories.map(({ label, slug }) => <option key={slug} value={slug}>{label}</option>)}
+        </select>
+        <select aria-label="Filter products by status" value={statusFilter} onChange={event => setStatusFilter(event.target.value)} style={{ ...inp, width: 'auto', minWidth: 135, padding: '8px 10px', fontSize: 12, cursor: 'pointer' }}>
+          <option value="All">All statuses</option>
+          {STATUS_OPTIONS.map(status => <option key={status} value={status}>{status}</option>)}
+        </select>
+        <select aria-label="Sort products" value={sortBy} onChange={event => setSortBy(event.target.value)} style={{ ...inp, width: 'auto', minWidth: 150, padding: '8px 10px', fontSize: 12, cursor: 'pointer' }}>
+          <option value="name">Name A–Z</option><option value="price-asc">Price: low to high</option><option value="price-desc">Price: high to low</option><option value="stock-asc">Stock: low to high</option><option value="stock-desc">Stock: high to low</option>
+        </select>
       </div>
 
       <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e8edf3', overflow: 'hidden' }}>
@@ -280,7 +295,7 @@ export default function AdminProducts() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 14 }}>
               <div style={{ gridColumn: '1/-1' }}><label style={lbl}>PRODUCT NAME *</label><input autoFocus value={form.name} onChange={event => F('name', event.target.value)} placeholder="e.g. Wireless noise-cancelling headphones" style={inp} /></div>
               <div style={{ gridColumn: '1/-1' }}><label style={lbl}>PRICE ENTRY CURRENCY</label><select value={form.currency} onChange={event => changeInputCurrency(event.target.value)} style={inp}>{CURRENCIES.map(item => <option key={item.code} value={item.code}>{item.flag} {item.code} · {item.name}</option>)}</select><small style={hint}>Entered prices convert to USD for the catalog, then to each shopper’s preferred currency. Changing this choice converts the amounts already entered.</small></div>
-              <div><label style={lbl}>CATEGORY *</label><input list="shoppercart-product-categories" value={form.category.replace(/[-_]+/g, ' ')} onChange={event => F('category', event.target.value)} placeholder="Choose or add a category" style={inp} /><datalist id="shoppercart-product-categories">{categories.map(item => <option key={item.slug} value={item.label} />)}</datalist><small style={hint}>Choose a suggestion or type a new category.</small></div>
+              <div><label style={lbl}>CATEGORY *</label><input list="shoppercart-product-categories" value={form.category.replace(/[-_]+/g, ' ')} onChange={event => F('category', event.target.value)} placeholder="Choose or add a category" style={inp} /><datalist id="shoppercart-product-categories">{categories.map(item => <option key={item.slug} value={item.label} />)}</datalist><small style={hint}>Choose a suggestion or type a new category. Save the product to add it to the category list.</small></div>
               <div><label style={lbl}>SKU</label><input value={form.sku} onChange={event => F('sku', event.target.value)} placeholder="Generated if left blank" style={inp} /></div>
               <div><label style={lbl}>SELLING PRICE ({form.currency}) *</label><input type="number" min="0.01" step="0.01" value={form.price} onChange={event => F('price', event.target.value)} placeholder="129.00" style={inp} /></div>
               <div><label style={lbl}>SUPPLIER UNIT COST ({form.currency}) *</label><input type="number" min="0" step="0.01" value={form.cost} onChange={event => F('cost', event.target.value)} placeholder="45.00" style={inp} /></div>

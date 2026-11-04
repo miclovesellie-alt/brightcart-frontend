@@ -19,12 +19,14 @@ const inputStyle = {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function AccountPage() {
-  const { user, orders, login, register, logout, navigate } = useStore();
+  const { user, orders = [], login, register, logout, navigate } = useStore();
   const { format } = useCurrency();
   const [tab, setTab] = useState('login');
   const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', country: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [orderFilter, setOrderFilter] = useState('all');
+  const [orderSort, setOrderSort] = useState('newest');
   const handleLogin = async e => {
     e.preventDefault();
     if (!form.email || !form.password) { setError('Please fill all fields.'); return; }
@@ -62,6 +64,12 @@ export default function AccountPage() {
   const update = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
 
   const STATUS_COLORS = { Pending: '#f59e0b', Processing: '#3b82f6', Shipped: '#8b5cf6', Delivered: '#16a34a' };
+  const orderStatuses = [...new Set(orders.map(order => String(order.status || 'Pending')))].sort();
+  const visibleAccountOrders = orders.filter(order => orderFilter === 'all' || String(order.status || 'Pending') === orderFilter).slice().sort((a, b) => {
+    const dateA = new Date(a.createdAt || a.date || 0).getTime();
+    const dateB = new Date(b.createdAt || b.date || 0).getTime();
+    return orderSort === 'oldest' ? dateA - dateB : dateB - dateA;
+  });
 
   // ── Logged-in profile view ──────────────────────────────────────────────────
   if (user) {
@@ -108,9 +116,12 @@ export default function AccountPage() {
 
           {/* Orders */}
           <div className="glass" style={{ borderRadius: '16px', padding: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px' }}>
-              <Package size={20} color="#4f8ef7" />
-              <h3 style={{ fontWeight: 700, fontSize: '18px', color: '#fff' }}>Order History</h3>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><Package size={20} color="#4f8ef7" /><h3 style={{ fontWeight: 700, fontSize: '18px', color: '#fff' }}>Order History</h3></div>
+              {!!orders.length && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <select aria-label="Filter order history by status" value={orderFilter} onChange={event => setOrderFilter(event.target.value)} style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,.12)', background: '#111118', color: '#fff', fontSize: 12 }}><option value="all">All statuses</option>{orderStatuses.map(status => <option key={status} value={status}>{status}</option>)}</select>
+                <select aria-label="Sort order history" value={orderSort} onChange={event => setOrderSort(event.target.value)} style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,.12)', background: '#111118', color: '#fff', fontSize: 12 }}><option value="newest">Newest first</option><option value="oldest">Oldest first</option></select>
+              </div>}
             </div>
 
             {orders.length === 0 ? (
@@ -120,9 +131,11 @@ export default function AccountPage() {
                 <p style={{ fontSize: '14px', color: '#8892a4', marginBottom: '20px' }}>Start shopping to see your orders here</p>
                 <button onClick={() => navigate('products')} className="btn-primary">Shop Now</button>
               </div>
+            ) : !visibleAccountOrders.length ? (
+              <div style={{ textAlign: 'center', padding: '36px 0', color: '#8892a4', fontSize: 13 }}>No orders match this status.</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {orders.map(order => (
+                {visibleAccountOrders.map(order => (
                   <div key={order.id} style={{
                     borderRadius: '12px',
                     padding: '16px',
