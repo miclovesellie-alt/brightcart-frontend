@@ -323,7 +323,42 @@ function ProductCard({ product, onClick }) {
 // ─── Featured Products ────────────────────────────────────────────────────────
 function FeaturedProducts() {
   const { products, catalogLoading, navigate } = useStore();
+  const cardRefs = useRef([]);
   const featured = products.filter(p => isStorefrontProduct(p) && p.featured).slice(0, 5);
+
+  const featuredIds = featured.map(product => product.id).join('|');
+
+  useEffect(() => {
+    const observers = [];
+    const revealTimeouts = [];
+
+    cardRefs.current.filter(Boolean).forEach((card, i) => {
+      if (!('IntersectionObserver' in window)) {
+        card.style.opacity = '1';
+        card.style.transform = 'translateY(0)';
+        return;
+      }
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+          const timeout = window.setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+          }, i * 100);
+          revealTimeouts.push(timeout);
+          observer.disconnect();
+        });
+      }, { threshold: 0.1 });
+      observers.push(observer);
+      observer.observe(card);
+    });
+
+    return () => {
+      observers.forEach(observer => observer.disconnect());
+      revealTimeouts.forEach(timeout => window.clearTimeout(timeout));
+    };
+  }, [featuredIds]);
 
   if (featured.length === 0) {
     if (!catalogLoading) return null;
@@ -335,7 +370,7 @@ function FeaturedProducts() {
           </div>
           <div className="home-featured-carousel">
             {[0, 1, 2].map(item => (
-              <div key={item} className="home-featured-slide home-featured-skeleton glass" aria-hidden="true">
+              <div key={item} className="home-featured-slide glass" aria-hidden="true">
                 <div className="skeleton" style={{ height: 150, borderRadius: 8 }} />
                 <div className="skeleton" style={{ width: 86, height: 18, borderRadius: 20 }} />
                 <div className="skeleton" style={{ width: '85%', height: 38 }} />
@@ -357,10 +392,12 @@ function FeaturedProducts() {
           <h2 style={{ fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>Featured Products</h2>
         </div>
         <div className="home-featured-carousel">
-          {featured.map(product => (
+          {featured.map((product, i) => (
             <div
               className="home-featured-slide"
               key={product.id}
+              ref={(el) => { cardRefs.current[i] = el; }}
+              style={{ opacity: 0, transform: 'translateY(40px)', transition: 'opacity 0.6s ease, transform 0.6s ease' }}
             >
               <ProductCard product={product} onClick={() => navigate('product-detail', { productId: product.id })} />
             </div>

@@ -353,6 +353,18 @@ export function StoreProvider({ children }) {
     return adminResult.data || [];
   }, []);
 
+  const updateStoreContacts = useCallback(async settings => {
+    const result = await api.updateAdminStoreSettings(settings);
+    const saved = result.data || {};
+    setStoreContacts(current => ({
+      ...current,
+      supportEmail: saved.supportEmail || '',
+      whatsappNumber: saved.whatsappNumber || '',
+      socials: saved.socials || {},
+    }));
+    return result;
+  }, []);
+
   const refreshAdminOrders = useCallback(async () => {
     const result = await api.getAdminOrders();
     setOrders(result.data || []);
@@ -366,12 +378,6 @@ export function StoreProvider({ children }) {
     return saved;
   }, []);
 
-  const updateStoreContacts = useCallback(async patch => {
-    const result = await api.updateAdminStoreSettings(patch);
-    setStoreContacts(current => ({ ...current, supportEmail: result.data.supportEmail, whatsappNumber: result.data.whatsappNumber, socials: result.data.socials || {} }));
-    return result;
-  }, []);
-
   const cartCount = cart.reduce((sum, item) => sum + item.qty, 0);
   const cartTotal = cart.reduce((sum, item) => sum + Number(item.product.price || 0) * item.qty, 0);
 
@@ -379,6 +385,8 @@ export function StoreProvider({ children }) {
     <StoreContext.Provider value={{
       products,
       catalogLoading,
+      storeContacts,
+      updateStoreContacts,
       adminProducts,
       cart,
       cartCount,
@@ -387,8 +395,6 @@ export function StoreProvider({ children }) {
       orders,
       page,
       pageParams,
-      storeContacts,
-      updateStoreContacts,
       canGoBack: pageHistory.length > 0 || page !== 'home',
       navigate,
       goBack,

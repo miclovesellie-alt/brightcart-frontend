@@ -1,5 +1,5 @@
 import { useStore } from '../context/StoreContext';
-import { Zap, Facebook, Instagram, Mail, MessageCircle, Music2, Twitter, Youtube } from 'lucide-react';
+import { Zap, Globe, Mail, MessageCircle } from 'lucide-react';
 
 const FOOTER_LINKS = {
   Shop: ['All Products', 'Phones', 'Phone Accessories', 'Laptop Accessories', 'Electrical', 'New Arrivals'],
@@ -13,11 +13,11 @@ export default function Footer() {
   const year = new Date().getFullYear();
   const whatsappNumber = String(storeContacts.whatsappNumber || '').replace(/\D/g, '');
   const socialLinks = [
-    { key: 'instagram', label: 'Instagram', icon: Instagram },
-    { key: 'facebook', label: 'Facebook', icon: Facebook },
-    { key: 'tiktok', label: 'TikTok', icon: Music2 },
-    { key: 'youtube', label: 'YouTube', icon: Youtube },
-    { key: 'x', label: 'X', icon: Twitter },
+    { key: 'instagram', label: 'Instagram', icon: Globe },
+    { key: 'facebook', label: 'Facebook', icon: Globe },
+    { key: 'tiktok', label: 'TikTok', icon: Globe },
+    { key: 'youtube', label: 'YouTube', icon: Globe },
+    { key: 'x', label: 'X', icon: Globe },
   ].filter(item => storeContacts.socials?.[item.key]);
 
   return (

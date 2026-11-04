@@ -822,33 +822,8 @@ img {
 }
 
 @media (max-width: 767px) {
-  .storefront-navbar--product-detail .storefront-back-button {
-    display: none !important;
-  }
-
   .product-detail-page__content {
     padding: 24px 12px !important;
-  }
-
-  .product-detail-back {
-    min-height: 36px;
-    margin-bottom: 20px !important;
-    padding: 0 10px !important;
-    border: 1px solid rgba(249,115,22,0.3) !important;
-    border-radius: 999px !important;
-    background: rgba(249,115,22,0.08) !important;
-    color: #fb923c !important;
-    font-size: 13px !important;
-  }
-
-  .product-detail-page__summary,
-  .product-detail-page__media {
-    min-width: 0;
-  }
-
-  .product-detail-page__summary > * {
-    max-width: 100%;
-    min-width: 0;
   }
 
   .product-detail-layout {
@@ -899,104 +874,6 @@ img {
   .admin-topbar-currency {
     display: none !important;
   }
-
-  .storefront-back-button {
-    width: 30px;
-    height: 30px;
-    flex-basis: 30px;
-  }
-
-  .storefront-navbar--product-detail .storefront-back-button {
-    display: none !important;
-  }
-
-  .product-detail-page__content {
-    padding: 18px 14px 36px !important;
-  }
-
-  .product-detail-back {
-    min-height: 36px;
-    margin-bottom: 20px !important;
-    padding: 0 10px !important;
-    border: 1px solid rgba(249,115,22,0.3) !important;
-    border-radius: 999px !important;
-    background: rgba(249,115,22,0.08) !important;
-    color: #fb923c !important;
-    font-size: 13px !important;
-  }
-
-  .product-detail-layout {
-    gap: 22px !important;
-    margin-bottom: 38px !important;
-  }
-
-  .product-detail-page__media,
-  .product-detail-page__summary {
-    gap: 16px !important;
-  }
-
-  .product-detail-page__media > .product-detail-image-frame {
-    height: clamp(230px, 76vw, 340px) !important;
-    min-height: 0 !important;
-    padding: 12px !important;
-    border-radius: 16px !important;
-  }
-
-  .product-detail-page__gallery {
-    width: 100% !important;
-    height: 100% !important;
-    flex: 1 1 auto !important;
-    border-radius: 12px !important;
-  }
-
-  .product-detail-page__title {
-    font-size: clamp(25px, 7vw, 34px) !important;
-    line-height: 1.16 !important;
-    letter-spacing: -0.025em !important;
-  }
-
-  .product-detail-page__price {
-    align-items: baseline !important;
-    padding: 13px !important;
-  }
-
-  .product-detail-page__price > span:first-child {
-    font-size: clamp(27px, 8vw, 34px) !important;
-  }
-
-  .product-detail-page__price > span:nth-child(2) {
-    font-size: 16px !important;
-  }
-
-  .product-detail-page__quantity {
-    flex-wrap: wrap;
-    gap: 10px !important;
-  }
-
-  .product-detail-page__description {
-    font-size: 14px !important;
-    line-height: 1.65 !important;
-    margin: 0;
-  }
-
-  .product-detail-guarantees {
-    gap: 8px !important;
-  }
-
-  .product-detail-guarantees > .glass {
-    min-width: 0;
-    padding: 10px 6px !important;
-  }
-
-  .product-detail-related-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 10px !important;
-  }
-
-  .product-detail-page h2 {
-    font-size: 21px !important;
-    margin-bottom: 16px !important;
-  }
 }
 
 
@@ -1008,9 +885,5 @@ img {
 
   .storefront-navbar__brand-name {
     display: none !important;
-  }
-
-  .product-detail-related-grid {
-    grid-template-columns: minmax(0, 1fr) !important;
   }
 }

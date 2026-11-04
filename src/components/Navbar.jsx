@@ -50,7 +50,7 @@ export default function Navbar() {
   return (
     <>
       <nav
-        className={`storefront-navbar${page === 'product-detail' ? ' storefront-navbar--product-detail' : ''}`}
+        className="storefront-navbar"
         style={{
           position: 'fixed',
           top: 0,

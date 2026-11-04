@@ -20,14 +20,6 @@
   min-width: 0;
   scroll-snap-align: start;
 }
-.home-featured-skeleton {
-  box-sizing: border-box;
-  min-height: 310px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
 .home-featured-slide > .home-product-card { height: 100%; }
 .home-featured-carousel::-webkit-scrollbar { height: 5px; }
 .home-featured-carousel::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 4px; }
