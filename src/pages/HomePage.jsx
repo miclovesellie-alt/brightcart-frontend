@@ -7,7 +7,7 @@ import ImageAssembler from '../components/ImageAssembler';
 import ProductImageGallery from '../components/ProductImageGallery';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { ChevronDown, Star, ShoppingCart, ArrowRight, Package, Truck, Shield, Headphones } from 'lucide-react';
+import { ChevronDown, Star, ArrowRight, Package, Truck, Shield, Headphones } from 'lucide-react';
 import './HomePage.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -217,20 +217,12 @@ function MarqueeTicker() {
 
 // ─── Product Card ─────────────────────────────────────────────────────────────
 function ProductCard({ product, onClick }) {
-  const { addToCart } = useStore();
   const { format } = useCurrency();
-  const [added, setAdded] = useState(false);
-  const [nameExpanded, setNameExpanded] = useState(false);
-  const hasColorOptions = Array.isArray(product.variants) && product.variants.some(variant => variant?.color || variant?.name);
-
-  const handleNameClick = (event) => {
-    const isSmallScreen = window.matchMedia('(max-width: 767px)').matches;
-    const isClamped = event.currentTarget.scrollHeight > event.currentTarget.clientHeight + 1;
-    if (isSmallScreen && isClamped && !nameExpanded) {
-      event.stopPropagation();
-      setNameExpanded(true);
-    }
-  };
+  const nameWords = String(product.name || '').trim().split(/\s+/).filter(Boolean);
+  const shortName = `${nameWords.slice(0, 4).join(' ')}${nameWords.length > 4 ? '…' : ''}`;
+  const rating = Number(product.rating);
+  const hasRating = Number.isFinite(rating) && rating > 0;
+  const reviews = Number(product.reviews);
 
   const catColors = {
     phones:              { bg: 'rgba(79,142,247,0.15)', color: '#4f8ef7' },
@@ -240,21 +232,22 @@ function ProductCard({ product, onClick }) {
   };
   const c = catColors[product.category] || catColors.phones;
 
-  const handleAdd = (e) => {
-    e.stopPropagation();
-    if (hasColorOptions) { onClick?.(); return; }
-    addToCart(product, 1);
-    setAdded(true);
-    setTimeout(() => setAdded(false), 1500);
-  };
-
   return (
     <div
       className="glass home-product-card"
+      role="link"
+      tabIndex={0}
+      aria-label={`View ${product.name} details`}
       onClick={onClick}
+      onKeyDown={event => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          onClick?.();
+        }
+      }}
       style={{
-        borderRadius: '16px', padding: '24px', cursor: 'pointer',
-        transition: 'all 0.3s ease', display: 'flex', flexDirection: 'column', gap: '14px', height: '100%', boxSizing: 'border-box',
+        borderRadius: '16px', padding: '16px', cursor: 'pointer',
+        transition: 'all 0.3s ease', display: 'flex', flexDirection: 'column', gap: '10px', height: '100%', boxSizing: 'border-box',
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = 'rgba(79,142,247,0.3)';
@@ -267,53 +260,33 @@ function ProductCard({ product, onClick }) {
         e.currentTarget.style.boxShadow = 'none';
       }}
     >
-      <ProductImageGallery product={product} alt={product.name} className="product-img-wrap" showControls={false} style={{ height: '200px', background: '#111118', borderRadius: '8px' }} imageStyle={{ padding: '12px' }} />
+      <ProductImageGallery product={product} alt={product.name} className="product-img-wrap" showControls={false} scrollable={false} swipeable={false} style={{ height: '160px', background: '#111118', borderRadius: '8px' }} imageStyle={{ padding: '10px' }} />
       <span style={{ alignSelf: 'flex-start', padding: '3px 10px', borderRadius: '100px', fontSize: '11px', fontWeight: 600, background: c.bg, color: c.color, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-        {product.category.replace('-', ' ')}
+        {formatCategory(product.category)}
       </span>
-      <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#fff', lineHeight: 1.4 }}>
-        <button
-          type="button"
-          className={`product-card-name${nameExpanded ? ' is-expanded' : ''}`}
-          aria-expanded={nameExpanded}
-          onClick={handleNameClick}
-        >
-          {product.name}
-        </button>
+      <h3 className="product-card-title" style={{ fontSize: '15px', fontWeight: 600, color: '#fff', lineHeight: 1.35, margin: 0 }}>
+        {shortName}
       </h3>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex' }}>
           {[...Array(5)].map((_, i) => (
             <Star key={i} size={12}
-              fill={i < Math.floor(product.rating) ? '#f6c90e' : 'none'}
-              color={i < Math.floor(product.rating) ? '#f6c90e' : '#4a5568'}
+              fill={hasRating && i < Math.floor(rating) ? '#f6c90e' : 'none'}
+              color={hasRating && i < Math.floor(rating) ? '#f6c90e' : '#4a5568'}
             />
           ))}
         </div>
-        <span style={{ fontSize: '12px', color: '#8892a4' }}>({product.reviews})</span>
+        <span style={{ fontSize: '12px', color: '#8892a4' }}>
+          {hasRating ? rating.toFixed(1) : 'Not rated'}
+          {Number.isFinite(reviews) && reviews > 0 ? ` (${reviews})` : ''}
+        </span>
       </div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
         <span style={{ fontSize: '20px', fontWeight: 700, color: '#fff' }}>{format(product.price)}</span>
         {product.originalPrice && (
           <span style={{ fontSize: '14px', color: '#4a5568', textDecoration: 'line-through' }}>{format(product.originalPrice)}</span>
         )}
       </div>
-      <button
-        onClick={handleAdd}
-        style={{
-          width: '100%', padding: '10px', marginTop: 'auto',
-          background: added ? 'rgba(34,197,94,0.2)' : '#f97316',
-          border: 'none', borderRadius: '8px', color: '#fff',
-          fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-          transition: 'all 0.3s ease',
-        }}
-        onMouseEnter={(e) => { if (!added) { e.currentTarget.style.background='#ea580c'; e.currentTarget.style.boxShadow='0 0 25px rgba(249,115,22,0.35)'; }}}
-        onMouseLeave={(e) => { if (!added) { e.currentTarget.style.background='#f97316'; e.currentTarget.style.boxShadow='none'; }}}
-      >
-        <ShoppingCart size={14} />
-        {hasColorOptions ? 'Choose a Color' : added ? '✓ Added!' : 'Add to Cart'}
-      </button>
     </div>
   );
 }

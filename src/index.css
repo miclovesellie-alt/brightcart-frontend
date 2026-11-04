@@ -50,27 +50,9 @@
     height: 132px !important;
   }
 
-  .products-grid > .glass > button:last-child {
-    margin-top: auto !important;
-  }
-
   .products-grid h3 {
     font-size: 13px !important;
     overflow-wrap: anywhere;
-  }
-
-  .product-card-name {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    overflow: hidden;
-    overflow-wrap: anywhere;
-  }
-
-  .product-card-name.is-expanded {
-    display: block;
-    -webkit-line-clamp: unset;
-    overflow: visible;
   }
 
   .product-detail-page__content {
@@ -346,19 +328,16 @@
   opacity: 0.3;
 }
 
-/* Product card title button keeps the existing heading typography. */
-.product-card-name {
-  display: block;
+/* Keep storefront product cards compact while keeping their titles readable. */
+.product-card-title {
   width: 100%;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  line-height: inherit;
   text-align: left;
   overflow-wrap: anywhere;
-  cursor: pointer;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  min-height: 2.7em;
+  overflow: hidden;
 }
 
 /* Product image hover */
