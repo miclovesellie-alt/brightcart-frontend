@@ -2,6 +2,7 @@ import { StoreProvider, useStore } from './context/StoreContext';
 import { CurrencyProvider } from './context/CurrencyContext';
 import SmoothScroll from './components/SmoothScroll';
 import Navbar from './components/Navbar';
+import PageBackButton from './components/PageBackButton';
 import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
 import ProductsPage from './pages/ProductsPage';
@@ -90,6 +91,11 @@ function AppContent() {
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#0a0a0f' }}>
         <Navbar />
         <main style={{ flex: 1 }}>
+          {page !== 'product-detail' && (
+            <div className="storefront-page-back-slot">
+              <PageBackButton className="storefront-page-back" />
+            </div>
+          )}
           {renderPage()}
         </main>
         {page === 'home' && <Footer />}

@@ -16,6 +16,7 @@ export default function PageBackButton({ className = '' }) {
       onClick={goBack}
     >
       <ArrowLeft size={17} aria-hidden="true" />
+      <span className="page-back-button__label">Back</span>
     </button>
   );
 }

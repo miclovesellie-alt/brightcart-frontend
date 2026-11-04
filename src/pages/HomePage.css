@@ -136,7 +136,7 @@
   }
 
   .home-featured-slide {
-    flex-basis: calc((100% - 24px) / 4);
+    flex-basis: calc((100% - 16px) / 3);
   }
 
   .home-featured-skeleton {

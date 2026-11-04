@@ -3,7 +3,6 @@ import { useStore } from '../context/StoreContext';
 import BrandLogo from './BrandLogo';
 import { ShoppingCart, User, Menu, X, ChevronDown } from 'lucide-react';
 import CurrencySelector from './CurrencySelector';
-import PageBackButton from './PageBackButton';
 
 const NAV_LINKS = [
   { label: 'Home', page: 'home' },
@@ -35,14 +34,7 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  const categoryPageMap = {
-    'Phones': 'phones',
-    'Phone Accessories': 'phone-accessories',
-    'Laptop Accessories': 'laptop-accessories',
-    'Electrical': 'electrical',
-  };
-
-  const handleCategoryNav = (cat) => {
+  const handleCategoryNav = () => {
     setDropdownOpen(false);
     setMobileOpen(false);
     navigate('products');
@@ -74,7 +66,6 @@ export default function Navbar() {
           gap: '32px',
         }}
       >
-        <PageBackButton className="storefront-back-button" />
         {/* Logo */}
         <button
           className="storefront-navbar__brand"
@@ -139,7 +130,7 @@ export default function Navbar() {
                     {link.dropdown.map((cat) => (
                       <button
                         key={cat}
-                        onClick={() => handleCategoryNav(cat)}
+                        onClick={handleCategoryNav}
                         style={{
                           display: 'block',
                           width: '100%',
