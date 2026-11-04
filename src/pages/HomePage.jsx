@@ -334,7 +334,12 @@ function ProductCard({ product, onClick }) {
         onMouseLeave={event => { if (!added) event.currentTarget.style.background = '#f97316'; }}
       >
         <ShoppingCart size={14} />
-        {hasColorOptions ? 'Choose a Color' : added ? 'Added to Cart' : 'Add to Cart'}
+        <span className="home-product-card__cart-label">
+          {hasColorOptions ? 'Choose a Color' : added ? 'Added to Cart' : 'Add to Cart'}
+        </span>
+        <span className="home-product-card__cart-label-mobile" aria-hidden="true">
+          {hasColorOptions ? 'Color' : added ? 'Added' : 'Add'}
+        </span>
       </button>
     </div>
   );
@@ -347,10 +352,9 @@ function FeaturedProducts() {
   const featured = useMemo(() => shuffleForPage(
     products.filter(product => isStorefrontProduct(product) && product.featured)
   ).slice(0, 10), [products]);
-  const featuredColumns = [];
-  for (let index = 0; index < featured.length; index += 2) {
-    featuredColumns.push(featured.slice(index, index + 2).map((product, row) => ({ product, index: index + row })));
-  }
+  const featuredRows = [[], []];
+  featured.forEach((product, index) => featuredRows[index % 2].push({ product, index }));
+  const visibleFeaturedRows = featuredRows.filter(row => row.length > 0);
 
   const featuredIds = featured.map(product => product.id).join('|');
 
@@ -394,11 +398,11 @@ function FeaturedProducts() {
           <div className="home-section-heading" style={{ marginBottom: '56px' }}>
             <h2 style={{ fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>Featured Products</h2>
           </div>
-          <div className="home-featured-carousel">
-            {[0, 1].map(column => (
-              <div key={column} className="home-featured-column" aria-hidden="true">
-                {[0, 1].map(item => (
-                  <div key={item} className="home-featured-slide glass">
+          <div className="home-featured-rows">
+            {[0, 1].map(row => (
+              <div key={row} className="home-featured-row" aria-hidden="true">
+                {[0, 1, 2, 3].map(item => (
+                  <div key={item} className="home-featured-slide home-featured-skeleton glass" aria-hidden="true">
                     <div className="skeleton" style={{ height: 150, borderRadius: 8 }} />
                     <div className="skeleton" style={{ width: 86, height: 18, borderRadius: 20 }} />
                     <div className="skeleton" style={{ width: '85%', height: 38 }} />
@@ -421,10 +425,16 @@ function FeaturedProducts() {
         <div className="home-section-heading" style={{ marginBottom: '56px' }}>
           <h2 style={{ fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>Featured Products</h2>
         </div>
-        <div className="home-featured-carousel">
-          {featuredColumns.map(column => (
-            <div className={`home-featured-column${column.length === 1 ? ' home-featured-column--single' : ''}`} key={column[0].product.id}>
-              {column.map(({ product, index }) => (
+        <div className="home-featured-rows">
+          {visibleFeaturedRows.map((row, rowIndex) => (
+            <div
+              className="home-featured-row"
+              key={rowIndex}
+              role="region"
+              tabIndex={0}
+              aria-label={`Featured products row ${rowIndex + 1}`}
+            >
+              {row.map(({ product, index }) => (
                 <div
                   className="home-featured-slide"
                   key={product.id}
