@@ -7,7 +7,7 @@ import ImageAssembler from '../components/ImageAssembler';
 import ProductImageGallery from '../components/ProductImageGallery';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { ChevronDown, Star, ArrowRight, Package, Truck, Shield, Headphones } from 'lucide-react';
+import { ChevronDown, Star, ShoppingCart, ArrowRight, Package, Truck, Shield, Headphones } from 'lucide-react';
 import './HomePage.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -217,7 +217,10 @@ function MarqueeTicker() {
 
 // ─── Product Card ─────────────────────────────────────────────────────────────
 function ProductCard({ product, onClick }) {
+  const { addToCart } = useStore();
   const { format } = useCurrency();
+  const [added, setAdded] = useState(false);
+  const hasColorOptions = Array.isArray(product.variants) && product.variants.some(variant => variant?.color || variant?.name);
   const nameWords = String(product.name || '').trim().split(/\s+/).filter(Boolean);
   const shortName = `${nameWords.slice(0, 4).join(' ')}${nameWords.length > 4 ? '…' : ''}`;
   const rating = Number(product.rating);
@@ -231,16 +234,26 @@ function ProductCard({ product, onClick }) {
     electrical:          { bg: 'rgba(34,197,94,0.15)',  color: '#22c55e' },
   };
   const c = catColors[product.category] || catColors.phones;
+  const handleAddToCart = event => {
+    event.stopPropagation();
+    if (hasColorOptions) {
+      onClick?.();
+      return;
+    }
+    addToCart(product, 1);
+    setAdded(true);
+    window.setTimeout(() => setAdded(false), 1500);
+  };
 
   return (
     <div
       className="glass home-product-card"
-      role="link"
+      role="group"
       tabIndex={0}
       aria-label={`View ${product.name} details`}
       onClick={onClick}
       onKeyDown={event => {
-        if (event.key === 'Enter') {
+        if (event.target === event.currentTarget && event.key === 'Enter') {
           event.preventDefault();
           onClick?.();
         }
@@ -287,6 +300,22 @@ function ProductCard({ product, onClick }) {
           <span style={{ fontSize: '14px', color: '#4a5568', textDecoration: 'line-through' }}>{format(product.originalPrice)}</span>
         )}
       </div>
+      <button
+        type="button"
+        onClick={handleAddToCart}
+        style={{
+          width: '100%', marginTop: 'auto', padding: '9px 10px',
+          background: added ? '#16a34a' : '#f97316', border: 'none', borderRadius: '8px',
+          color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+          transition: 'all 0.2s ease',
+        }}
+        onMouseEnter={event => { if (!added) event.currentTarget.style.background = '#ea580c'; }}
+        onMouseLeave={event => { if (!added) event.currentTarget.style.background = '#f97316'; }}
+      >
+        <ShoppingCart size={14} />
+        {hasColorOptions ? 'Choose a Color' : added ? 'Added to Cart' : 'Add to Cart'}
+      </button>
     </div>
   );
 }
@@ -295,7 +324,7 @@ function ProductCard({ product, onClick }) {
 function FeaturedProducts() {
   const { products, navigate } = useStore();
   const cardRefs = useRef([]);
-  const featured = products.filter(p => isStorefrontProduct(p) && p.featured).slice(0, 6);
+  const featured = products.filter(p => isStorefrontProduct(p) && p.featured).slice(0, 5);
 
   const featuredIds = featured.map(product => product.id).join('|');
 
@@ -339,12 +368,13 @@ function FeaturedProducts() {
         <div className="home-section-heading" style={{ marginBottom: '56px' }}>
           <h2 style={{ fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>Featured Products</h2>
         </div>
-        <div className="home-featured-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gridAutoRows: '1fr', alignItems: 'stretch', gap: '24px' }}>
+        <div className="home-featured-carousel">
           {featured.map((product, i) => (
             <div
+              className="home-featured-slide"
               key={product.id}
               ref={(el) => { cardRefs.current[i] = el; }}
-              style={{ opacity: 0, transform: 'translateY(40px)', transition: 'opacity 0.6s ease, transform 0.6s ease', height: '100%' }}
+              style={{ opacity: 0, transform: 'translateY(40px)', transition: 'opacity 0.6s ease, transform 0.6s ease' }}
             >
               <ProductCard product={product} onClick={() => navigate('product-detail', { productId: product.id })} />
             </div>

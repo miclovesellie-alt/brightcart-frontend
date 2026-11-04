@@ -3,7 +3,7 @@ import { useStore } from '../context/StoreContext';
 import { useCurrency } from '../context/CurrencyContext';
 import ProductImageGallery from '../components/ProductImageGallery';
 import { categoryLabel } from '../utils/productImages';
-import { Search, Star } from 'lucide-react';
+import { Search, Star, ShoppingCart } from 'lucide-react';
 
 const CATEGORIES = [
   { label: 'All', value: 'all' },
@@ -34,7 +34,10 @@ function SkeletonCard() {
 }
 
 function ProductCard({ product, onClick }) {
+  const { addToCart } = useStore();
   const { format } = useCurrency();
+  const [added, setAdded] = useState(false);
+  const hasColorOptions = Array.isArray(product.variants) && product.variants.some(variant => variant?.color || variant?.name);
   const nameWords = String(product.name || '').trim().split(/\s+/).filter(Boolean);
   const shortName = `${nameWords.slice(0, 4).join(' ')}${nameWords.length > 4 ? '…' : ''}`;
   const rating = Number(product.rating);
@@ -48,15 +51,25 @@ function ProductCard({ product, onClick }) {
     electrical: { bg: 'rgba(34,197,94,0.15)', color: '#22c55e' },
   };
   const colors = categoryColors[product.category] || categoryColors.phones;
+  const handleAddToCart = event => {
+    event.stopPropagation();
+    if (hasColorOptions) {
+      onClick?.();
+      return;
+    }
+    addToCart(product, 1);
+    setAdded(true);
+    window.setTimeout(() => setAdded(false), 1500);
+  };
   return (
     <div
       className="glass"
-      role="link"
+      role="group"
       tabIndex={0}
       aria-label={`View ${product.name} details`}
       onClick={onClick}
       onKeyDown={event => {
-        if (event.key === 'Enter') {
+        if (event.target === event.currentTarget && event.key === 'Enter') {
           event.preventDefault();
           onClick?.();
         }
@@ -126,7 +139,22 @@ function ProductCard({ product, onClick }) {
           <span style={{ fontSize: '13px', color: '#4a5568', textDecoration: 'line-through' }}>{format(product.originalPrice)}</span>
         )}
       </div>
-
+      <button
+        type="button"
+        onClick={handleAddToCart}
+        style={{
+          width: '100%', marginTop: 'auto', padding: '9px 10px',
+          background: added ? '#16a34a' : '#f97316', border: 'none', borderRadius: '8px',
+          color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+          transition: 'all 0.2s ease',
+        }}
+        onMouseEnter={event => { if (!added) event.currentTarget.style.background = '#ea580c'; }}
+        onMouseLeave={event => { if (!added) event.currentTarget.style.background = '#f97316'; }}
+      >
+        <ShoppingCart size={14} />
+        {hasColorOptions ? 'Choose a Color' : added ? 'Added to Cart' : 'Add to Cart'}
+      </button>
     </div>
   );
 }
