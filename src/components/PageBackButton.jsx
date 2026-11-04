@@ -2,7 +2,9 @@ import { ArrowLeft } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 
 export default function PageBackButton({ className = '' }) {
-  const { canGoBack, goBack } = useStore();
+  const { page, canGoBack, goBack } = useStore();
+
+  if (['home', 'admin', 'admin-dashboard'].includes(page)) return null;
 
   return (
     <button
