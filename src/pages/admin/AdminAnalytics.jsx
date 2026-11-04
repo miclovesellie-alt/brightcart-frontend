@@ -87,7 +87,7 @@ export default function AdminAnalytics() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <div><h2 style={{ fontWeight: 800, fontSize: 18, color: '#0f172a', margin: 0 }}>Analytics</h2><p style={{ color: '#64748b', fontSize: 12, margin: '2px 0 0' }}>Calculated from real orders and products saved in Shoppercart.</p></div>
+        <div><h2 style={{ fontWeight: 800, fontSize: 18, color: '#0f172a', margin: 0 }}>Analytics</h2><p style={{ color: '#64748b', fontSize: 12, margin: '2px 0 0' }}>Calculated from real orders and products saved in your store.</p></div>
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>{PERIOD_OPTIONS.map(option => <button key={option.days} onClick={() => setDays(option.days)} style={{ padding: '6px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', background: days === option.days ? '#2563eb' : '#fff', color: days === option.days ? '#fff' : '#374151', border: `1px solid ${days === option.days ? '#2563eb' : '#e2e8f0'}` }}>{option.label}</button>)}</div>
       </div>
 
@@ -106,7 +106,7 @@ export default function AdminAnalytics() {
         <section style={{ background: '#fff', borderRadius: 14, border: '1px solid #e8edf3', padding: '18px 20px' }}><div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a', marginBottom: 16 }}>Orders by country</div>{data.countries.length ? <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{data.countries.map(country => <div key={country.name} style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span style={{ fontSize: 12, color: '#374151', flex: 1 }}>{country.name}</span><div style={{ flex: 2, height: 6, background: '#f1f5f9', borderRadius: 99 }}><div style={{ height: '100%', borderRadius: 99, background: '#2563eb', width: `${country.count / data.countries[0].count * 100}%` }} /></div><span style={{ fontSize: 11, fontWeight: 700, color: '#0f172a', minWidth: 28, textAlign: 'right' }}>{country.count}</span></div>)}</div> : <div style={{ color: '#94a3b8', fontSize: 12 }}>Country analytics will appear when checkout orders include a country.</div>}</section>
       </div>
 
-      <section style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 14, padding: '15px 18px', display: 'flex', gap: 10, alignItems: 'flex-start' }}><AlertCircle size={17} color="#d97706" style={{ flexShrink: 0, marginTop: 1 }} /><div><div style={{ fontWeight: 700, fontSize: 12, color: '#92400e' }}>Supplier performance is unavailable</div><div style={{ fontSize: 11, color: '#a16207', lineHeight: 1.6, marginTop: 3 }}>Shoppercart has no supplier API connected, so delivery scores, supplier return rates, and margins cannot be reported yet. No estimates are shown as real performance.</div></div></section>
+      <section style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 14, padding: '15px 18px', display: 'flex', gap: 10, alignItems: 'flex-start' }}><AlertCircle size={17} color="#d97706" style={{ flexShrink: 0, marginTop: 1 }} /><div><div style={{ fontWeight: 700, fontSize: 12, color: '#92400e' }}>Supplier performance is unavailable</div><div style={{ fontSize: 11, color: '#a16207', lineHeight: 1.6, marginTop: 3 }}>No supplier API is connected, so delivery scores, supplier return rates, and margins cannot be reported yet. No estimates are shown as real performance.</div></div></section>
     </div>
   );
 }

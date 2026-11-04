@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { useCurrency } from '../context/CurrencyContext';
 import ProductImageGallery from '../components/ProductImageGallery';
+import { categoryLabel, categorySlug } from '../utils/productImages';
 import { Star, ShoppingCart, Heart, ArrowLeft, Shield, Truck, RefreshCw, Package } from 'lucide-react';
 
 const GUARANTEES = [
@@ -33,8 +34,10 @@ export default function ProductDetailPage() {
       : [selectedVariant.image || selectedVariant.imageUrl, ...(product.images || [])].filter(Boolean),
   } : product;
 
-  const related = product ? products
-    .filter(p => p.category === product.category && p.id !== product.id)
+  const productCategory = categorySlug(product?.category);
+  const related = product && productCategory ? products
+    .filter(p => categorySlug(p.category) === productCategory && String(p.id) !== String(product.id))
+    .sort((a, b) => Number(Boolean(b.featured)) - Number(Boolean(a.featured)) || Number(b.rating || 0) - Number(a.rating || 0))
     .slice(0, 4) : [];
 
   const specs = Array.isArray(product?.specifications)
@@ -336,54 +339,36 @@ export default function ProductDetailPage() {
 
         {/* Related Products */}
         {related.length > 0 && (
-          <div>
-            <h2 style={{ fontSize: '24px', fontWeight: 700, color: '#fff', marginBottom: '24px' }}>Related Products</h2>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-              gap: '20px',
-            }}>
-              {related.map((p) => (
-                <div
-                  key={p.id}
-                  className="glass"
-                  onClick={() => navigate('product-detail', { productId: p.id })}
-                  style={{
-                    borderRadius: '12px',
-                    padding: '16px',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    display: 'flex',
-                    gap: '12px',
-                    alignItems: 'center',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.borderColor = 'rgba(79,142,247,0.3)';
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
-                >
-                  <div style={{
-                    width: '64px',
-                    height: '64px',
-                    background: '#111118',
-                    borderRadius: '8px',
-                    overflow: 'hidden',
-                    flexShrink: 0,
-                  }}>
-                    <ProductImageGallery product={p} alt={p.name} showControls={false} scrollable={false} style={{ width: '100%', height: '100%', overflow: 'hidden' }} imageStyle={{ padding: 4 }} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: '13px', fontWeight: 600, color: '#fff', lineHeight: 1.3, marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</p>
-                    <p style={{ fontSize: '14px', fontWeight: 700, color: '#4f8ef7' }}>{format(p.price)}</p>
-                  </div>
-                </div>
-              ))}
+          <section className="product-recommendations" aria-labelledby="product-recommendations-heading">
+            <div className="product-recommendations__heading">
+              <div>
+                <span className="product-recommendations__eyebrow">MORE IN {categoryLabel(product.category)}</span>
+                <h2 id="product-recommendations-heading">You may also like</h2>
+              </div>
+              <button type="button" onClick={() => navigate('products', { category: productCategory })} className="product-recommendations__browse">Browse this category <ArrowLeft size={14} /></button>
             </div>
-          </div>
+            <div className="product-recommendations-grid">
+              {related.map(item => {
+                const rating = Number(item.rating);
+                const hasRating = Number.isFinite(rating) && rating > 0;
+                const words = String(item.name || '').trim().split(/\s+/).filter(Boolean);
+                const shortName = `${words.slice(0, 4).join(' ')}${words.length > 4 ? '…' : ''}`;
+                return <button
+                  key={item.id}
+                  type="button"
+                  className="glass product-recommendation-card"
+                  onClick={() => navigate('product-detail', { productId: item.id })}
+                  aria-label={`View ${item.name} product details`}
+                >
+                  <ProductImageGallery product={item} alt={item.name} className="product-recommendation-image" showControls={false} scrollable={false} swipeable={false} style={{ width: '100%', height: 150, background: '#111118', borderRadius: 9, overflow: 'hidden' }} imageStyle={{ padding: 8 }} />
+                  <span className="product-recommendation-category">{categoryLabel(item.category)}</span>
+                  <span className="product-recommendation-title" title={item.name}>{shortName}</span>
+                  <span className="product-recommendation-rating"><span aria-hidden="true">{[...Array(5)].map((_, index) => <Star key={index} size={11} fill={hasRating && index < Math.floor(rating) ? '#f6c90e' : 'none'} color={hasRating && index < Math.floor(rating) ? '#f6c90e' : '#4a5568'} />)}</span><small>{hasRating ? rating.toFixed(1) : 'Not rated'}{Number(item.reviews) > 0 ? ` · ${item.reviews} reviews` : ''}</small></span>
+                  <span className="product-recommendation-prices"><strong>{format(item.price)}</strong>{item.originalPrice > item.price && <del>{format(item.originalPrice)}</del>}</span>
+                </button>;
+              })}
+            </div>
+          </section>
         )}
       </div>
 

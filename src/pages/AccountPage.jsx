@@ -4,6 +4,7 @@ import { useStore } from '../context/StoreContext';
 import { useCurrency } from '../context/CurrencyContext';
 import AirpodsAnimation from '../components/AirpodsAnimation';
 import ProductImageGallery from '../components/ProductImageGallery';
+import BrandLogo from '../components/BrandLogo';
 
 // ── Input style ───────────────────────────────────────────────────────────────
 const inputStyle = {
@@ -178,6 +179,7 @@ export default function AccountPage() {
                       <span style={{ color: '#8892a4' }}>{order.items.reduce((s,i) => s+i.qty, 0)} items</span>
                       <span style={{ fontWeight: 700, color: '#4f8ef7' }}>{format(order.total)}</span>
                     </div>
+                    {(order.tracking || order.trackingUrl) && <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.08)', fontSize: 12, color: '#8892a4' }}><span>{order.tracking ? `Tracking: ${order.tracking}` : 'Tracking information'}</span>{order.trackingUrl && <a href={order.trackingUrl} target="_blank" rel="noreferrer" style={{ color: '#fb923c', fontWeight: 700, textDecoration: 'none' }}>Track shipment</a>}</div>}
                   </div>
                 ))}
               </div>
@@ -248,21 +250,9 @@ export default function AccountPage() {
 
         {/* Center: login/register modal */}
         <div style={{ width: '100%', maxWidth: '420px', flexShrink: 0 }}>
-          {/* Shoppercart branding above modal */}
+          {/* Store logo above sign-in */}
           <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-            <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '6px 16px',
-              borderRadius: '100px',
-              background: 'rgba(79,142,247,0.1)',
-              border: '1px solid rgba(79,142,247,0.25)',
-              marginBottom: '8px',
-            }}>
-              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4f8ef7', boxShadow: '0 0 6px #4f8ef7' }} />
-              <span style={{ fontSize: '12px', color: '#4f8ef7', fontWeight: 600, letterSpacing: '0.08em' }}>SHOPPERCART STORE</span>
-            </div>
+            <BrandLogo width={110} height={78} />
           </div>
 
           <div className="glass" style={{ borderRadius: '20px', padding: '36px' }}>
@@ -311,7 +301,7 @@ export default function AccountPage() {
                 {tab === 'login' ? 'Welcome Back' : 'Create Account'}
               </h1>
               <p style={{ fontSize: '13px', color: '#8892a4', marginTop: '4px' }}>
-                {tab === 'login' ? 'Sign in to your Shoppercart account' : 'Join thousands of happy shoppers'}
+                {tab === 'login' ? 'Sign in to your account' : 'Join thousands of happy shoppers'}
               </p>
             </div>
 
@@ -433,9 +423,7 @@ export default function AccountPage() {
             gap: '12px',
           }}
         >
-          <h2 style={{ fontSize: '26px', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', margin: 0, lineHeight: 1.2 }}>
-            Shoppercart.
-          </h2>
+          <BrandLogo width={152} height={104} style={{ alignItems: 'flex-start' }} />
           <p style={{ fontSize: '14px', lineHeight: 1.6, color: '#94a3b8', margin: 0 }}>
             Phones, laptops, accessories, and home tech delivered straight from verified makers.
           </p>

@@ -110,7 +110,7 @@ export default function AdminDashboard() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h2 style={{ fontWeight: 800, fontSize: 20, color: '#0f172a', margin: 0 }}>Welcome, {user?.name || 'Admin'}</h2>
-          <p style={{ color: '#64748b', fontSize: 13, margin: '2px 0 0' }}>Live activity from your Shoppercart store.</p>
+          <p style={{ color: '#64748b', fontSize: 13, margin: '2px 0 0' }}>Live activity from your store.</p>
         </div>
         <button onClick={() => navigate('admin-products')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: 'none', background: '#f97316', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
           <Package size={14} /> Manage Products

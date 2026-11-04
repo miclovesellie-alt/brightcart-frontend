@@ -1,4 +1,4 @@
-export default function ProductImageFallback({ className = '', style = {}, label = 'Shoppercart product' }) {
+export default function ProductImageFallback({ className = '', style = {}, label = 'Product image' }) {
   return (
     <div
       className={className}

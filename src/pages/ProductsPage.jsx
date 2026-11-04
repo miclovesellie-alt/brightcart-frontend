@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '../context/StoreContext';
 import { useCurrency } from '../context/CurrencyContext';
 import ProductImageGallery from '../components/ProductImageGallery';
-import { categoryLabel } from '../utils/productImages';
+import { categoryLabel, categorySlug } from '../utils/productImages';
 import { Search, Star, ShoppingCart } from 'lucide-react';
 
 const CATEGORIES = [
@@ -160,7 +160,7 @@ function ProductCard({ product, onClick }) {
 }
 
 export default function ProductsPage() {
-  const { products, navigate } = useStore();
+  const { products, navigate, pageParams } = useStore();
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('all');
   const [sortBy, setSortBy] = useState('featured');
@@ -168,7 +168,7 @@ export default function ProductsPage() {
   const [visibleCount, setVisibleCount] = useState(12);
   const categories = [
     ...CATEGORIES,
-    ...[...new Set(products.map(product => product.category).filter(Boolean))]
+    ...[...new Set(products.map(product => categorySlug(product.category)).filter(Boolean))]
       .filter(value => !CATEGORIES.some(category => category.value === value))
       .map(value => ({ label: categoryLabel(value), value })),
   ];
@@ -178,9 +178,15 @@ export default function ProductsPage() {
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    const requestedCategory = categorySlug(pageParams?.category);
+    setActiveCategory(requestedCategory || 'all');
+    setVisibleCount(12);
+  }, [pageParams?.category]);
+
   const filtered = products
     .filter(p => {
-      const matchCat = activeCategory === 'all' || p.category === activeCategory;
+      const matchCat = activeCategory === 'all' || categorySlug(p.category) === categorySlug(activeCategory);
       const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase());
       return matchCat && matchSearch;
     })

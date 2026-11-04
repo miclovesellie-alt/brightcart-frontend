@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useStore } from '../context/StoreContext';
+import BrandLogo from './BrandLogo';
 import { ShoppingCart, User, Menu, X, ChevronDown } from 'lucide-react';
 import CurrencySelector from './CurrencySelector';
 import PageBackButton from './PageBackButton';
@@ -90,8 +91,7 @@ export default function Navbar() {
             flexShrink: 0,
           }}
         >
-          <img className="storefront-navbar__brand-mark" src="/shoppercart-mark.png" alt="" />
-          <img className="storefront-navbar__brand-wordmark" src="/shoppercart-wordmark.png" alt="Shoppercart" />
+          <BrandLogo className="storefront-navbar__brand-logo" width={88} height={56} />
         </button>
 
         {/* Center Nav - Desktop */}

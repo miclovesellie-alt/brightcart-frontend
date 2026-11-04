@@ -624,7 +624,7 @@ function NewsletterSection() {
         </p>
         {subscribed ? (
           <div className="glass" style={{ padding: '20px 32px', borderRadius: '12px', color: '#22c55e', fontWeight: 600 }}>
-            ✓ You're in! Welcome to the Shoppercart community.
+            ✓ You're in! Welcome to the community.
           </div>
         ) : (
           <form onSubmit={(e) => { e.preventDefault(); if (email) setSubscribed(true); }}

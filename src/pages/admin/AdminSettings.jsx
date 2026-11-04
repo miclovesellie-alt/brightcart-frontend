@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useCurrency } from '../../context/CurrencyContext';
 import { useStore } from '../../context/StoreContext';
 import { api } from '../../utils/api';
-import { Activity, CheckCircle, CreditCard, Database, Globe, Mail, MessageCircle, RefreshCw, Save, Server, Truck, AlertCircle } from 'lucide-react';
+import BrandLogo from '../../components/BrandLogo';
+import { Activity, CheckCircle, CreditCard, Database, Globe, Mail, MessageCircle, RefreshCw, Save, Send, Server, Truck, AlertCircle } from 'lucide-react';
 
 const API_URL = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://shoppercart-api.onrender.com/api')).replace(/\/$/, '');
 
@@ -28,6 +29,9 @@ export default function AdminSettings() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [testingEmail, setTestingEmail] = useState(false);
+  const [testEmailMessage, setTestEmailMessage] = useState('');
+  const [testEmailError, setTestEmailError] = useState('');
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
   const [saveError, setSaveError] = useState('');
@@ -41,6 +45,7 @@ export default function AdminSettings() {
     if (settingsResult.status === 'fulfilled') {
       setForm(current => ({ ...current, ...settingsResult.value.data, socials: { ...current.socials, ...(settingsResult.value.data?.socials || {}) }, notifications: { ...current.notifications, ...(settingsResult.value.data?.notifications || {}) } }));
       setEmailService(settingsResult.value.email || null);
+      setSaved(true);
     }
     const errors = [healthResult, connectionResult, settingsResult].filter(result => result.status === 'rejected').map(result => result.reason?.message).filter(Boolean);
     if (errors.length) setError(errors.join(' '));
@@ -54,8 +59,8 @@ export default function AdminSettings() {
   const supplier = connections?.supplier || {};
   const payment = connections?.payment || {};
 
-  const setField = (key, value) => { setSaved(false); setForm(current => ({ ...current, [key]: value })); };
-  const setSocial = (key, value) => { setSaved(false); setForm(current => ({ ...current, socials: { ...current.socials, [key]: value } })); };
+  const setField = (key, value) => { setSaved(false); setTestEmailMessage(''); setTestEmailError(''); setForm(current => ({ ...current, [key]: value })); };
+  const setSocial = (key, value) => { setSaved(false); setTestEmailMessage(''); setTestEmailError(''); setForm(current => ({ ...current, socials: { ...current.socials, [key]: value } })); };
   const setNotification = (key, value) => { setSaved(false); setForm(current => ({ ...current, notifications: { ...current.notifications, [key]: value } })); };
   const saveSettings = async event => {
     event.preventDefault();
@@ -71,6 +76,20 @@ export default function AdminSettings() {
       setSaveError(saveFailure.message || 'Could not save store contact settings.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const sendTestEmail = async () => {
+    setTestingEmail(true);
+    setTestEmailMessage('');
+    setTestEmailError('');
+    try {
+      const result = await api.sendAdminTestEmail();
+      setTestEmailMessage(result.message || `Test email sent to ${result.sentTo || form.notificationEmail}.`);
+    } catch (testFailure) {
+      setTestEmailError(testFailure.message || 'Could not send the test email.');
+    } finally {
+      setTestingEmail(false);
     }
   };
 
@@ -107,15 +126,21 @@ export default function AdminSettings() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
           <Status ok={emailService?.configured === true}>{emailService?.configured ? `Email ready via ${emailService.provider}` : 'Email provider needs setup'}</Status>
-          <button type="submit" disabled={saving} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 14px', background: '#f97316', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 700, fontSize: 12, cursor: saving ? 'wait' : 'pointer' }}><Save size={14} />{saving ? 'Saving…' : 'Save storefront settings'}</button>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button type="button" onClick={sendTestEmail} disabled={testingEmail || !emailService?.configured || !form.notificationEmail || !saved} title={!saved ? 'Save your settings before sending a test email' : ''} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 14px', background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa', borderRadius: 9, fontWeight: 700, fontSize: 12, cursor: testingEmail ? 'wait' : 'pointer', opacity: testingEmail || !emailService?.configured || !form.notificationEmail || !saved ? 0.55 : 1 }}><Send size={14} />{testingEmail ? 'Sending…' : 'Send test email'}</button>
+            <button type="submit" disabled={saving} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 14px', background: '#f97316', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 700, fontSize: 12, cursor: saving ? 'wait' : 'pointer' }}><Save size={14} />{saving ? 'Saving…' : 'Save storefront settings'}</button>
+          </div>
         </div>
         {saveError && <div role="alert" style={{ color: '#b91c1c', fontSize: 12 }}>{saveError}</div>}
+        {testEmailError && <div role="alert" style={{ color: '#b91c1c', fontSize: 12 }}>{testEmailError}</div>}
+        {testEmailMessage && <div role="status" style={{ color: '#15803d', fontSize: 12 }}>{testEmailMessage}</div>}
+        {!saved && form.notificationEmail && <div style={{ color: '#64748b', fontSize: 11 }}>Save your settings before sending a test email.</div>}
         {saved && <div role="status" style={{ color: '#15803d', fontSize: 12 }}>Storefront links and notification preferences saved.</div>}
         {!emailService?.configured && <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, color: '#92400e', background: '#fffbeb', padding: '10px 12px', borderRadius: 8, fontSize: 11, lineHeight: 1.5 }}><MessageCircle size={14} style={{ flexShrink: 0, marginTop: 1 }} />To send emails, add RESEND_API_KEY and EMAIL_FROM to the backend hosting environment. Keep the API key on the backend.</div>}
       </form>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 14 }}>
-        <Card icon={Globe} title="Store identity" status={form.supportEmail || form.whatsappNumber ? 'Contact set' : 'Add contact'} ok={Boolean(form.supportEmail || form.whatsappNumber)}><div style={{ fontSize: 13, color: '#0f172a', fontWeight: 700 }}>Shoppercart</div><a href="https://shoppercart.uhcacadamy.com" target="_blank" rel="noreferrer" style={{ fontSize: 11, color: '#c2410c', textDecoration: 'none' }}>shoppercart.uhcacadamy.com</a>{form.supportEmail && <div style={{ fontSize: 10, color: '#64748b', marginTop: 8 }}>Support email: {form.supportEmail}</div>}{form.whatsappNumber && <div style={{ fontSize: 10, color: '#64748b', marginTop: 4 }}>WhatsApp: +{form.whatsappNumber}</div>}</Card>
+        <Card icon={Globe} title="Store identity" status={form.supportEmail || form.whatsappNumber ? 'Contact set' : 'Add contact'} ok={Boolean(form.supportEmail || form.whatsappNumber)}><BrandLogo width={125} height={82} style={{ alignItems: 'flex-start' }} /><a href="https://shoppercart.uhcacadamy.com" target="_blank" rel="noreferrer" style={{ display: 'block', fontSize: 11, color: '#c2410c', textDecoration: 'none' }}>Open storefront</a>{form.supportEmail && <div style={{ fontSize: 10, color: '#64748b', marginTop: 8 }}>Support email: {form.supportEmail}</div>}{form.whatsappNumber && <div style={{ fontSize: 10, color: '#64748b', marginTop: 4 }}>WhatsApp: +{form.whatsappNumber}</div>}</Card>
 
         <Card icon={Server} title="Backend API" status={loading ? 'Checking' : health?.status === 'ok' ? 'Online' : 'Unavailable'} ok={health?.status === 'ok'}><div style={{ fontSize: 11, color: '#334155', wordBreak: 'break-all' }}>{API_URL}</div><div style={{ display: 'flex', gap: 14, marginTop: 10, flexWrap: 'wrap' }}><Status ok={databaseReady}>Database {health?.database || (loading ? 'checking' : 'unknown')}</Status><Status ok={authReady}>JWT {authReady ? 'configured' : loading ? 'checking' : 'not configured'}</Status></div>{health?.timestamp && <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 8 }}>Health checked {new Date(health.timestamp).toLocaleString()}</div>}</Card>
 

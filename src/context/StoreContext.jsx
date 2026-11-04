@@ -378,6 +378,13 @@ export function StoreProvider({ children }) {
     return saved;
   }, []);
 
+  const verifyPaystackOrder = useCallback(async id => {
+    const result = await api.verifyPaystackOrder(id);
+    const saved = result.data;
+    setOrders(prev => prev.map(order => order.id === saved.id ? saved : order));
+    return saved;
+  }, []);
+
   const cartCount = cart.reduce((sum, item) => sum + item.qty, 0);
   const cartTotal = cart.reduce((sum, item) => sum + Number(item.product.price || 0) * item.qty, 0);
 
@@ -411,6 +418,7 @@ export function StoreProvider({ children }) {
       refreshAdminProducts,
       refreshAdminOrders,
       updateOrder,
+      verifyPaystackOrder,
       adminUsers,
       addAdminUser,
       removeAdminUser,

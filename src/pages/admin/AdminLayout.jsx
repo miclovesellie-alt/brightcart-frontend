@@ -7,6 +7,7 @@ import {
 import { useStore } from '../../context/StoreContext';
 import CurrencySelector from '../../components/CurrencySelector';
 import PageBackButton from '../../components/PageBackButton';
+import BrandLogo from '../../components/BrandLogo';
 import { isSampleProduct } from '../../utils/catalog';
 
 const ALL_NAV = [
@@ -49,12 +50,9 @@ export default function AdminLayout({ children, activePage }) {
     <div style={{ display:'flex', flexDirection:'column', height:'100%', background:'#0b1222' }}>
       {/* Logo */}
       <div style={{ padding:'20px 20px 16px', borderBottom:'1px solid rgba(255,255,255,0.06)' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <img src="/shoppercart-mark.png" alt="" style={{ width:38, height:28, objectFit:'contain', mixBlendMode:'screen' }} />
-          <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
-            <img src="/shoppercart-wordmark.png" alt="Shoppercart" style={{ display:'block', width:112, height:20, objectFit:'contain', mixBlendMode:'screen' }} />
-            <div style={{ fontSize:10, color:'#475569', letterSpacing:'0.06em' }}>ADMIN PANEL</div>
-          </div>
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-start', gap:3 }}>
+          <BrandLogo width={104} height={70} />
+          <div style={{ fontSize:10, color:'#475569', letterSpacing:'0.06em' }}>ADMIN PANEL</div>
         </div>
       </div>
 
@@ -139,7 +137,7 @@ export default function AdminLayout({ children, activePage }) {
             <div style={{ fontWeight:700, fontSize:15, color:'#0f172a' }}>
               {ALL_NAV.find(n => n.page === activePage)?.label || 'Admin'}
             </div>
-            <div style={{ fontSize:11, color:'#94a3b8' }}>Shoppercart · Dropshipping Dashboard</div>
+            <div style={{ fontSize:11, color:'#94a3b8' }}>Store administration</div>
           </div>
 
           {/* Search */}

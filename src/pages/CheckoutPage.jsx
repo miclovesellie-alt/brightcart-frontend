@@ -74,6 +74,7 @@ export default function CheckoutPage() {
             ...shipping,
             paymentMethod: 'Paystack (MoMo/Card)',
             paymentRef: res.reference,
+            paymentCurrency: paystackCurrency,
           });
           setOrderPlaced(order);
         } catch (error) {
@@ -123,9 +124,11 @@ export default function CheckoutPage() {
           </div>
           <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>Order received</h1>
           <p style={{ color: '#8892a4', marginBottom: '12px', fontSize: '15px' }}>
-            {orderPlaced.paymentStatus === 'pending_verification'
-              ? 'Paystack returned a reference. A super admin must verify it against Paystack before fulfillment.'
-              : 'Your order is recorded as unpaid. We will confirm payment before fulfillment.'}
+            {orderPlaced.paymentStatus === 'paid'
+              ? 'Your Paystack payment is verified and your order is now in the fulfillment queue.'
+              : orderPlaced.paymentStatus === 'pending_verification'
+                ? 'Your payment reference was received. We are verifying it with Paystack before fulfillment.'
+                : 'Your order is recorded as unpaid. We will confirm payment before fulfillment.'}
           </p>
           <div style={{ background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)', marginBottom: '24px', textAlign: 'left' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
@@ -135,12 +138,12 @@ export default function CheckoutPage() {
             {orderPlaced.paymentRef && (
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                 <span style={{ color: '#64748b', fontSize: '13px' }}>Paystack Reference:</span>
-                <span style={{ fontFamily: 'monospace', color: '#22c55e', fontSize: '13px' }}>{orderPlaced.paymentRef}</span>
+              <span style={{ fontFamily: 'monospace', color: '#22c55e', fontSize: '13px' }}>{orderPlaced.paymentReference || orderPlaced.paymentRef}</span>
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
               <span style={{ color: '#64748b', fontSize: '13px' }}>Payment status:</span>
-              <span style={{ color: '#f59e0b', fontWeight: 700, fontSize: '13px', textTransform: 'capitalize' }}>{String(orderPlaced.paymentStatus || 'unpaid').replaceAll('_', ' ')}</span>
+              <span style={{ color: orderPlaced.paymentStatus === 'paid' ? '#22c55e' : '#f59e0b', fontWeight: 700, fontSize: '13px', textTransform: 'capitalize' }}>{String(orderPlaced.paymentStatus || 'unpaid').replaceAll('_', ' ')}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#64748b', fontSize: '13px' }}>Total Amount:</span>

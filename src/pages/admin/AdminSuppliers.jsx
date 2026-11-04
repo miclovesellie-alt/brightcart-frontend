@@ -34,7 +34,7 @@ export default function AdminSuppliers() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <div><h2 style={{ fontWeight: 800, fontSize: 18, color: '#0f172a', margin: 0 }}>Supplier setup</h2><p style={{ color: '#64748b', fontSize: 12, margin: '2px 0 0' }}>Live supplier status reported by the Shoppercart API.</p></div>
+        <div><h2 style={{ fontWeight: 800, fontSize: 18, color: '#0f172a', margin: 0 }}>Supplier setup</h2><p style={{ color: '#64748b', fontSize: 12, margin: '2px 0 0' }}>Live supplier status reported by the backend API.</p></div>
         <button onClick={loadConnection} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 14px', background: '#fff', color: '#374151', border: '1px solid #e2e8f0', borderRadius: 9, fontWeight: 600, fontSize: 12, cursor: loading ? 'wait' : 'pointer' }}><RefreshCw size={14} /> Refresh status</button>
       </div>
 

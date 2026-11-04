@@ -19,6 +19,11 @@ function roundMoneyInCurrency(amount, code) {
   return Math.round(Number(amount) * factor) / factor;
 }
 
+function formatActivityDate(value) {
+  const date = value ? new Date(value) : null;
+  return date && Number.isFinite(date.getTime()) ? date.toLocaleString() : 'Date unavailable';
+}
+
 const NAV = [
   { id: 'overview', label: 'Overview', icon: Activity },
   { id: 'research', label: 'Research', icon: Search },
@@ -133,19 +138,23 @@ export default function AIDropshipping() {
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
-    try {
-      const [summary, status, candidates, loggedPurchases] = await Promise.all([
+    const results = await Promise.allSettled([
         api.getDropshipOverview(days), api.getDropshipConnections(), api.getResearch(), api.getSupplierPurchases(),
-      ]);
-      setOverview(summary);
-      setConnections(status);
-      setResearch(candidates.data || []);
-      setPurchases(loggedPurchases.data || []);
-    } catch (err) {
-      setError(err.message || 'The dropshipping workspace could not load.');
-    } finally {
-      setLoading(false);
-    }
+    ]);
+    const labels = ['overview', 'connections', 'research', 'supplier purchase records'];
+    const failures = [];
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        failures.push(`${labels[index]}: ${result.reason?.message || 'unavailable'}`);
+        return;
+      }
+      if (index === 0) setOverview(result.value);
+      if (index === 1) setConnections(result.value);
+      if (index === 2) setResearch(result.value.data || []);
+      if (index === 3) setPurchases(result.value.data || []);
+    });
+    if (failures.length) setError(`Some workspace data could not refresh. Loaded sections remain available. ${failures.join(' ')}`);
+    setLoading(false);
   }, [days]);
 
   useEffect(() => { load(); }, [load]);
@@ -604,6 +613,21 @@ export default function AIDropshipping() {
     }
   }
 
+  async function verifyPaymentWithPaystack(order) {
+    setSaving(true);
+    setError('');
+    try {
+      await api.verifyPaystackOrder(order.id);
+      await refreshAdminOrders();
+      await loadOverviewOnly();
+      setNotice('Paystack verified the payment. The order is ready for the next fulfillment step.');
+    } catch (err) {
+      setError(err.message || 'Could not verify this payment with Paystack.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const draftProducts = adminProducts.filter(product => product.status === 'Draft');
   const visibleResearch = research.filter(candidate => {
     const query = researchSearch.trim().toLowerCase();
@@ -622,6 +646,11 @@ export default function AIDropshipping() {
     return String(a.name || '').localeCompare(String(b.name || ''));
   });
   const pendingPaymentOrders = orders.filter(order => order.paymentStatus === 'pending_verification');
+  const researchToReview = research.filter(candidate => candidate.state !== 'imported').length;
+  const purchaseOrderIds = new Set(purchases.map(item => String(item.orderId)));
+  const paidOrdersToRecord = orders.filter(order => order.paymentStatus === 'paid'
+    && !['cancelled', 'canceled', 'refunded'].includes(String(order.status || '').toLowerCase())
+    && !purchaseOrderIds.has(String(order.id))).length;
   const visibleOrders = orders.filter(order => fulfillmentStatus === 'all' || String(order.status || 'Pending') === fulfillmentStatus).sort((a, b) => {
     if (fulfillmentSort === 'oldest') return new Date(a.createdAt || a.date || 0) - new Date(b.createdAt || b.date || 0);
     if (fulfillmentSort === 'total-desc') return Number(b.total || 0) - Number(a.total || 0);
@@ -632,7 +661,7 @@ export default function AIDropshipping() {
     <div className="ds-page">
       <header className="ds-page-head">
         <div>
-          <div className="ds-eyebrow"><Sparkles size={13} /> SHOPPERCART WORKSPACE</div>
+          <div className="ds-eyebrow"><Sparkles size={13} /> PRODUCT RESEARCH WORKSPACE</div>
           <h1>AI Dropshipping</h1>
           <p>Research, review, price, and publish products from one controlled workspace.</p>
         </div>
@@ -644,6 +673,22 @@ export default function AIDropshipping() {
 
       {error && <div className="ds-alert ds-alert-error" role="alert"><AlertTriangle size={16} />{error}<button onClick={() => setError('')} aria-label="Dismiss"><X size={14} /></button></div>}
       {notice && <div className="ds-alert ds-alert-success" role="status"><CheckCircle2 size={16} />{notice}<button onClick={() => setNotice('')} aria-label="Dismiss"><X size={14} /></button></div>}
+
+      <div className="ds-workflow-grid" aria-label="Dropshipping work queues">
+        {[
+          { id: 'research', label: 'Research to review', count: researchToReview, note: 'Source facts and pricing', icon: Search, tone: 'blue' },
+          { id: 'studio', label: 'Drafts to review', count: draftProducts.length, note: 'Edit and approve products', icon: Package, tone: 'violet' },
+          { id: 'fulfillment', label: 'Payments to check', count: pendingPaymentOrders.length, note: 'Verify before purchasing', icon: ShieldCheck, tone: 'amber' },
+          { id: 'fulfillment', label: 'Paid orders to record', count: paidOrdersToRecord, note: 'Log supplier purchase details', icon: Truck, tone: 'green' },
+        ].map(item => {
+          const Icon = item.icon;
+          return <button type="button" key={item.label} className={`ds-workflow-card ds-workflow-${item.tone}`} onClick={() => setSection(item.id)} disabled={loading && !overview} aria-label={`${item.count} ${item.label}. ${item.note}. Open ${item.id}.`}>
+            <span className="ds-workflow-icon"><Icon size={17} /></span>
+            <span className="ds-workflow-copy"><strong>{loading && !overview ? '—' : item.count}</strong><span>{item.label}</span><small>{item.note}</small></span>
+            <ChevronRight size={15} className="ds-workflow-arrow" />
+          </button>;
+        })}
+      </div>
 
       <div className="ds-layout">
         <nav className="ds-nav" aria-label="Dropshipping sections">
@@ -692,7 +737,7 @@ export default function AIDropshipping() {
               </div>
               <section className="ds-panel" style={cardStyle}>
                 <div className="ds-panel-head"><div><h3>Recent decisions and actions</h3><p>Audit trail from research, imports, publishing, payment confirmation, and purchase records.</p></div></div>
-                {overview?.activity?.length ? <div className="ds-activity-list">{overview.activity.slice(0, 8).map((item, index) => <div key={item._id || index}><span className="ds-activity-dot" /><div><strong>{item.summary}</strong><small>{item.actor || 'Admin'} · {new Date(item.createdAt || Date.now()).toLocaleString()}</small></div></div>)}</div> : <div className="ds-empty">No activity has been recorded yet.</div>}
+                {overview?.activity?.length ? <div className="ds-activity-list">{overview.activity.slice(0, 8).map((item, index) => <div key={item._id || index}><span className="ds-activity-dot" /><div><strong>{item.summary}</strong><small>{item.actor || 'Admin'} · {formatActivityDate(item.createdAt)}</small></div></div>)}</div> : <div className="ds-empty">No activity has been recorded yet.</div>}
               </section>
             </section>
           )}
@@ -846,7 +891,7 @@ export default function AIDropshipping() {
           {section === 'fulfillment' && (
             <section className="ds-stack">
               <div className="ds-section-head"><div><h2>Supplier purchasing &amp; fulfillment</h2><p>Only verified paid orders are eligible. This workspace records manual supplier purchases; it does not submit supplier orders.</p></div><StatusPill tone="amber">No supplier API connected</StatusPill></div>
-              <div className="ds-callout"><ShieldCheck size={17} /><div><strong>Purchasing safety</strong><span>Automatic purchasing is off. Checkout callbacks remain pending verification. A super admin must verify payment externally, then you can record a supplier order placed through an authorized supplier channel.</span></div></div>
+              <div className="ds-callout"><ShieldCheck size={17} /><div><strong>Purchasing safety</strong><span>Automatic supplier purchasing is off. {connections?.payment?.serverVerification ? 'Paystack payments are checked by the backend; pending payments can be rechecked here.' : 'Paystack server verification is not configured, so checkout payments need external review.'} After payment is verified, you can record a supplier order placed through an authorized supplier channel.</span></div></div>
               <section className="ds-panel" style={cardStyle}>
                 <div className="ds-panel-head"><div><h3>Customer orders</h3><p>{visibleOrders.length} orders available for this view.</p></div></div>
                 <div className="ds-list-controls">
@@ -857,13 +902,16 @@ export default function AIDropshipping() {
                   const status = String(order.status || 'Pending');
                   const cancelled = ['cancelled', 'canceled', 'refunded'].includes(status.toLowerCase());
                   const paid = order.paymentStatus === 'paid';
+                  const paystackPayment = String(order.paymentMethod || '').toLowerCase().includes('paystack');
                   const purchase = purchases.find(item => String(item.orderId) === String(order.id));
                   return (
                     <article className="ds-order-card" key={order.id}>
                       <div className="ds-order-top"><div><h4>{order.id}</h4><p>{order.customer} · {order.email}</p></div><div className="ds-order-badges"><StatusPill tone={paid ? 'green' : 'amber'}>{String(order.paymentStatus || 'unpaid').replaceAll('_', ' ')}</StatusPill><StatusPill>{status}</StatusPill></div></div>
                       <div className="ds-order-meta"><span>Total <b>{format(order.total || 0)}</b></span><span>Items <b>{(order.items || []).reduce((sum, item) => sum + Number(item.qty || 1), 0)}</b></span><span>Supplier spend <b>{purchase ? format(purchase.actualCost || 0) : 'Not recorded'}</b></span></div>
                       {!paid && ['pending_verification', 'unpaid'].includes(order.paymentStatus) && user?.role === 'super_admin' && !cancelled && (
-                        paymentConfirmId === order.id ? (
+                        paystackPayment && connections?.payment?.serverVerification ? (
+                          <button className="ds-link-button" onClick={() => verifyPaymentWithPaystack(order)} disabled={saving}>Recheck payment with Paystack</button>
+                        ) : paymentConfirmId === order.id ? (
                           <div className="ds-inline-form"><Field label="PAYMENT REFERENCE" value={paymentForm.paymentReference} onChange={event => setPaymentForm(prev => ({ ...prev, paymentReference: event.target.value }))} /><Field label="EXTERNAL VERIFICATION NOTE" value={paymentForm.verificationNote} onChange={event => setPaymentForm(prev => ({ ...prev, verificationNote: event.target.value }))} placeholder="Where/how you verified it" /><button style={buttonStyle} onClick={() => confirmPayment(order)} disabled={saving}>Confirm paid</button><button style={secondaryStyle} onClick={() => setPaymentConfirmId(null)}>Cancel</button></div>
                         ) : <button className="ds-link-button" onClick={() => setPaymentConfirmId(order.id)}>Record external payment verification</button>
                       )}
@@ -899,8 +947,8 @@ export default function AIDropshipping() {
                   <div className="ds-setup-box"><strong>Backend environment</strong><code>MONGODB_URI · JWT_SECRET (32+ random characters) · SUPER_ADMIN_EMAIL · SUPER_ADMIN_PASSWORD</code></div>
                 </article>
                 <article className="ds-connection-card" style={cardStyle}>
-                  <div className="ds-connection-icon ds-icon-amber"><DollarSign size={19} /></div><div className="ds-connection-title"><div><h3>Payment verification</h3><p>Paystack callback state</p></div><StatusPill tone="amber">Manual confirmation</StatusPill></div>
-                  <p className="ds-connection-copy">The browser callback is stored as pending verification. A super admin must compare the reference with Paystack before the order becomes eligible for supplier purchasing.</p>
+                  <div className="ds-connection-icon ds-icon-amber"><DollarSign size={19} /></div><div className="ds-connection-title"><div><h3>Payment verification</h3><p>Paystack callback and server checks</p></div><StatusPill tone={connections?.payment?.serverVerification ? 'green' : 'amber'}>{connections?.payment?.mode || 'Checking'}</StatusPill></div>
+                  <p className="ds-connection-copy">{connections?.payment?.setup || 'Checking payment verification setup.'}</p>
                   <div className="ds-setup-box"><strong>Current safeguard</strong><span>No supplier purchase can be recorded against unpaid, unverified, cancelled, or refunded orders.</span></div>
                 </article>
               </div>

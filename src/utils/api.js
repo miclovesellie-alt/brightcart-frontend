@@ -6,7 +6,7 @@ const API_BASE = (import.meta.env.VITE_API_URL || (import.meta.env.DEV
 
 async function request(path, options = {}) {
   if (!API_BASE) {
-    throw new Error('Shoppercart API is not configured. Set VITE_API_URL to the deployed backend API URL.');
+    throw new Error('Store API is not configured. Set VITE_API_URL to the deployed backend API URL.');
   }
   const { auth = true, ...init } = options;
   const headers = new Headers(init.headers || {});
@@ -18,7 +18,7 @@ async function request(path, options = {}) {
   try {
     response = await fetch(`${API_BASE}${path}`, { ...init, headers });
   } catch (error) {
-    throw new Error(`Cannot reach the Shoppercart API. Check VITE_API_URL and the backend status. ${error.message}`);
+    throw new Error(`Cannot reach the store API. Check VITE_API_URL and the backend status. ${error.message}`);
   }
 
   let payload = {};
@@ -50,6 +50,7 @@ export const api = {
   async getStoreSettings() { return request('/store-settings', { auth: false }); },
   async getAdminStoreSettings() { return request('/admin/store-settings'); },
   async updateAdminStoreSettings(settings) { return request('/admin/store-settings', { method: 'PATCH', body: body(settings) }); },
+  async sendAdminTestEmail() { return request('/admin/store-settings/test-email', { method: 'POST', body: body({}) }); },
   async getAdminProducts() { return request('/admin/products'); },
   async addProduct(product) { return request('/admin/products', { method: 'POST', body: body(product) }); },
   async updateProduct(product) { return request(`/admin/products/${encodeURIComponent(product.id)}`, { method: 'PATCH', body: body(product) }); },
@@ -60,6 +61,7 @@ export const api = {
   async getAccountOrders() { return request('/account/orders'); },
   async placeOrder(order) { return request('/orders', { method: 'POST', body: body(order) }); },
   async updateOrder(id, patch) { return request(`/admin/orders/${encodeURIComponent(id)}`, { method: 'PATCH', body: body(patch) }); },
+  async verifyPaystackOrder(id) { return request(`/admin/orders/${encodeURIComponent(id)}/verify-paystack`, { method: 'POST', body: body({}) }); },
 
   async getAdminUsers() { return request('/admin/users'); },
   async addAdminUser(user) { return request('/admin/users', { method: 'POST', body: body(user) }); },

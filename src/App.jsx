@@ -92,7 +92,7 @@ function AppContent() {
         <main style={{ flex: 1 }}>
           {renderPage()}
         </main>
-        <Footer />
+        {page === 'home' && <Footer />}
       </div>
     </SmoothScroll>
   );
