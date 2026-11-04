@@ -47,6 +47,9 @@ export const api = {
   async getMe() { return request('/auth/me'); },
 
   async getProducts() { return request('/products', { auth: false }); },
+  async getStoreSettings() { return request('/store-settings', { auth: false }); },
+  async getAdminStoreSettings() { return request('/admin/store-settings'); },
+  async updateAdminStoreSettings(settings) { return request('/admin/store-settings', { method: 'PATCH', body: body(settings) }); },
   async getAdminProducts() { return request('/admin/products'); },
   async addProduct(product) { return request('/admin/products', { method: 'POST', body: body(product) }); },
   async updateProduct(product) { return request(`/admin/products/${encodeURIComponent(product.id)}`, { method: 'PATCH', body: body(product) }); },

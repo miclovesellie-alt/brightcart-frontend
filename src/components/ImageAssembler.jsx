@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { gsap } from 'gsap';
 
 const COLS = 8;
@@ -21,6 +21,7 @@ export default function ImageAssembler({ src, width = 600, height = 420, trigger
   const tilesRef = useRef([]);
   const animatedRef = useRef(false);
   const timelineRef = useRef(null);
+  const [assembled, setAssembled] = useState(false);
 
   const tileW = width / COLS;
   const tileH = height / ROWS;
@@ -67,19 +68,7 @@ export default function ImageAssembler({ src, width = 600, height = 420, trigger
         each: 0.02,
         from: 'random',
       },
-      onComplete: () => {
-        // Subtle breathing after assembly
-        tiles.forEach((tile, i) => {
-          gsap.to(tile, {
-            y: Math.sin(i * 0.5) * 3,
-            duration: 2 + Math.random() * 1,
-            ease: 'sine.inOut',
-            repeat: -1,
-            yoyo: true,
-            delay: Math.random() * 1,
-          });
-        });
-      },
+      onComplete: () => setAssembled(true),
     });
   }, []);
 
@@ -130,7 +119,9 @@ export default function ImageAssembler({ src, width = 600, height = 420, trigger
         overflow: 'visible',
       }}
     >
-      {Array.from({ length: ROWS }).map((_, row) =>
+      {assembled ? (
+        <img className="image-assembler__final" src={src} alt="" aria-hidden="true" />
+      ) : Array.from({ length: ROWS }).map((_, row) =>
         Array.from({ length: COLS }).map((_, col) => {
           const index = row * COLS + col;
           const bgX = -(col * tileW);

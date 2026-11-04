@@ -67,27 +67,13 @@ function HeroSection() {
         boxSizing: 'border-box',
       }}>
 
-        {/* LEFT: Copy */}
+      {/* LEFT: Copy */}
         <div ref={textRef} className="home-hero__copy">
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: '8px',
-            padding: '6px 16px',
-            border: '1px solid rgba(79,142,247,0.35)',
-            borderRadius: '100px',
-            background: 'rgba(79,142,247,0.07)',
-            marginBottom: '30px',
-          }}>
-            <span style={{ color: '#4f8ef7', fontSize: '13px' }}>✦</span>
-            <span style={{ color: '#8892a4', fontSize: '12px', fontWeight: 500, letterSpacing: '0.04em' }}>
-              Premium Tech Store
-            </span>
-          </div>
-
           <h1 style={{
             fontSize: 'clamp(36px, 5vw, 76px)',
             fontWeight: 900, lineHeight: 1.04,
             letterSpacing: '-0.03em',
-            marginBottom: '20px', color: '#fff',
+            marginBottom: '20px', color: '#fff', textAlign: 'center',
           }}>
             The Future of<br />
             <span className="text-gradient">Tech Delivered</span>
@@ -98,12 +84,12 @@ function HeroSection() {
             lineHeight: 1.75, maxWidth: '390px', marginBottom: '36px',
             opacity: 1,
           }}>
-            Premium phones, accessories &amp; appliances —
-            engineered for the modern world. Watch each device
+            Premium phones, accessories and appliances, engineered
+            for the modern world. Watch each device
             assemble before your eyes.
           </p>
 
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '40px' }}>
+          <div className="home-hero__actions" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '40px' }}>
             <button className="btn-primary" onClick={() => navigate('products')}>
               Explore Collection <ArrowRight size={16} />
             </button>
@@ -111,7 +97,7 @@ function HeroSection() {
           </div>
 
           {/* Trust row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+          <div className="home-hero__trust" style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
               {[...Array(5)].map((_, i) => <Star key={i} size={13} fill="#f6c90e" color="#f6c90e" />)}
               <span style={{ color: '#8892a4', fontSize: '12px', marginLeft: '4px' }}>4.9 / 5</span>
@@ -123,14 +109,14 @@ function HeroSection() {
           </div>
 
           {/* Live indicator */}
-          <div style={{ marginTop: '32px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div className="home-hero__live" style={{ marginTop: '32px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{
               width: '7px', height: '7px', borderRadius: '50%',
               background: '#22c55e', boxShadow: '0 0 10px #22c55e',
               animation: 'pulseDot 1.6s ease-in-out infinite',
             }} />
             <span style={{ fontSize: '10px', color: '#4a5568', letterSpacing: '0.07em' }}>
-              AUTO-CYCLING · 5 DEVICES · MOVE MOUSE TO ROTATE
+              AUTO CYCLING · FIVE DEVICES · MOVE TO ROTATE
             </span>
           </div>
         </div>
@@ -234,17 +220,12 @@ function ProductCard({ product, onClick }) {
   const { addToCart } = useStore();
   const { format } = useCurrency();
   const [added, setAdded] = useState(false);
-  const [nameExpanded, setNameExpanded] = useState(false);
   const hasColorOptions = Array.isArray(product.variants) && product.variants.some(variant => variant?.color || variant?.name);
-
-  const handleNameClick = (event) => {
-    const isSmallScreen = window.matchMedia('(max-width: 767px)').matches;
-    const isClamped = event.currentTarget.scrollHeight > event.currentTarget.clientHeight + 1;
-    if (isSmallScreen && isClamped && !nameExpanded) {
-      event.stopPropagation();
-      setNameExpanded(true);
-    }
-  };
+  const nameWords = String(product.name || '').trim().split(/\s+/).filter(Boolean);
+  const shortName = `${nameWords.slice(0, 4).join(' ')}${nameWords.length > 4 ? '…' : ''}`;
+  const rating = Number(product.rating);
+  const hasRating = Number.isFinite(rating) && rating > 0;
+  const reviews = Number(product.reviews);
 
   const catColors = {
     phones:              { bg: 'rgba(79,142,247,0.15)', color: '#4f8ef7' },
@@ -253,22 +234,33 @@ function ProductCard({ product, onClick }) {
     electrical:          { bg: 'rgba(34,197,94,0.15)',  color: '#22c55e' },
   };
   const c = catColors[product.category] || catColors.phones;
-
-  const handleAdd = (e) => {
-    e.stopPropagation();
-    if (hasColorOptions) { onClick?.(); return; }
+  const handleAddToCart = event => {
+    event.stopPropagation();
+    if (hasColorOptions) {
+      onClick?.();
+      return;
+    }
     addToCart(product, 1);
     setAdded(true);
-    setTimeout(() => setAdded(false), 1500);
+    window.setTimeout(() => setAdded(false), 1500);
   };
 
   return (
     <div
       className="glass home-product-card"
+      role="group"
+      tabIndex={0}
+      aria-label={`View ${product.name} details`}
       onClick={onClick}
+      onKeyDown={event => {
+        if (event.target === event.currentTarget && event.key === 'Enter') {
+          event.preventDefault();
+          onClick?.();
+        }
+      }}
       style={{
-        borderRadius: '16px', padding: '24px', cursor: 'pointer',
-        transition: 'all 0.3s ease', display: 'flex', flexDirection: 'column', gap: '14px', height: '100%', boxSizing: 'border-box',
+        borderRadius: '16px', padding: '16px', cursor: 'pointer',
+        transition: 'all 0.3s ease', display: 'flex', flexDirection: 'column', gap: '10px', height: '100%', boxSizing: 'border-box',
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = 'rgba(79,142,247,0.3)';
@@ -281,52 +273,48 @@ function ProductCard({ product, onClick }) {
         e.currentTarget.style.boxShadow = 'none';
       }}
     >
-      <ProductImageGallery product={product} alt={product.name} className="product-img-wrap" style={{ height: '200px', background: '#111118', borderRadius: '8px' }} imageStyle={{ padding: '12px' }} />
+      <ProductImageGallery product={product} alt={product.name} className="product-img-wrap" showControls={false} scrollable={false} swipeable={false} style={{ height: '160px', background: '#111118', borderRadius: '8px' }} imageStyle={{ padding: '10px' }} />
       <span style={{ alignSelf: 'flex-start', padding: '3px 10px', borderRadius: '100px', fontSize: '11px', fontWeight: 600, background: c.bg, color: c.color, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-        {product.category.replace('-', ' ')}
+        {formatCategory(product.category)}
       </span>
-      <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#fff', lineHeight: 1.4 }}>
-        <button
-          type="button"
-          className={`product-card-name${nameExpanded ? ' is-expanded' : ''}`}
-          aria-expanded={nameExpanded}
-          onClick={handleNameClick}
-        >
-          {product.name}
-        </button>
+      <h3 className="product-card-title" style={{ fontSize: '15px', fontWeight: 600, color: '#fff', lineHeight: 1.35, margin: 0 }}>
+        {shortName}
       </h3>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex' }}>
           {[...Array(5)].map((_, i) => (
             <Star key={i} size={12}
-              fill={i < Math.floor(product.rating) ? '#f6c90e' : 'none'}
-              color={i < Math.floor(product.rating) ? '#f6c90e' : '#4a5568'}
+              fill={hasRating && i < Math.floor(rating) ? '#f6c90e' : 'none'}
+              color={hasRating && i < Math.floor(rating) ? '#f6c90e' : '#4a5568'}
             />
           ))}
         </div>
-        <span style={{ fontSize: '12px', color: '#8892a4' }}>({product.reviews})</span>
+        <span style={{ fontSize: '12px', color: '#8892a4' }}>
+          {hasRating ? rating.toFixed(1) : 'Not rated'}
+          {Number.isFinite(reviews) && reviews > 0 ? ` (${reviews})` : ''}
+        </span>
       </div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
         <span style={{ fontSize: '20px', fontWeight: 700, color: '#fff' }}>{format(product.price)}</span>
         {product.originalPrice && (
           <span style={{ fontSize: '14px', color: '#4a5568', textDecoration: 'line-through' }}>{format(product.originalPrice)}</span>
         )}
       </div>
       <button
-        onClick={handleAdd}
+        type="button"
+        onClick={handleAddToCart}
         style={{
-          width: '100%', padding: '10px', marginTop: 'auto',
-          background: added ? 'rgba(34,197,94,0.2)' : '#4f8ef7',
-          border: 'none', borderRadius: '8px', color: '#fff',
-          fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+          width: '100%', marginTop: 'auto', padding: '9px 10px',
+          background: added ? '#16a34a' : '#f97316', border: 'none', borderRadius: '8px',
+          color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-          transition: 'all 0.3s ease',
+          transition: 'all 0.2s ease',
         }}
-        onMouseEnter={(e) => { if (!added) { e.currentTarget.style.background='#3d7ef5'; e.currentTarget.style.boxShadow='0 0 25px rgba(79,142,247,0.4)'; }}}
-        onMouseLeave={(e) => { if (!added) { e.currentTarget.style.background='#4f8ef7'; e.currentTarget.style.boxShadow='none'; }}}
+        onMouseEnter={event => { if (!added) event.currentTarget.style.background = '#ea580c'; }}
+        onMouseLeave={event => { if (!added) event.currentTarget.style.background = '#f97316'; }}
       >
         <ShoppingCart size={14} />
-        {hasColorOptions ? 'Choose a Color' : added ? '✓ Added!' : 'Add to Cart'}
+        {hasColorOptions ? 'Choose a Color' : added ? 'Added to Cart' : 'Add to Cart'}
       </button>
     </div>
   );
@@ -334,62 +322,45 @@ function ProductCard({ product, onClick }) {
 
 // ─── Featured Products ────────────────────────────────────────────────────────
 function FeaturedProducts() {
-  const { products, navigate } = useStore();
-  const cardRefs = useRef([]);
-  const featured = products.filter(p => isStorefrontProduct(p) && p.featured).slice(0, 6);
+  const { products, catalogLoading, navigate } = useStore();
+  const featured = products.filter(p => isStorefrontProduct(p) && p.featured).slice(0, 5);
 
-  const featuredIds = featured.map(product => product.id).join('|');
-
-  useEffect(() => {
-    const observers = [];
-    const revealTimeouts = [];
-
-    cardRefs.current.filter(Boolean).forEach((card, i) => {
-      if (!('IntersectionObserver' in window)) {
-        card.style.opacity = '1';
-        card.style.transform = 'translateY(0)';
-        return;
-      }
-
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (!entry.isIntersecting) return;
-          const timeout = window.setTimeout(() => {
-            card.style.opacity = '1';
-            card.style.transform = 'translateY(0)';
-          }, i * 100);
-          revealTimeouts.push(timeout);
-          observer.disconnect();
-        });
-      }, { threshold: 0.1 });
-      observers.push(observer);
-      observer.observe(card);
-    });
-
-    return () => {
-      observers.forEach(observer => observer.disconnect());
-      revealTimeouts.forEach(timeout => window.clearTimeout(timeout));
-    };
-  }, [featuredIds]);
-
-  if (featured.length === 0) return null;
+  if (featured.length === 0) {
+    if (!catalogLoading) return null;
+    return (
+      <section className="home-section" style={{ background: '#0a0a0f', padding: '100px 0' }} aria-busy="true" aria-label="Loading featured products">
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 32px' }}>
+          <div className="home-section-heading" style={{ marginBottom: '56px' }}>
+            <h2 style={{ fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>Featured Products</h2>
+          </div>
+          <div className="home-featured-carousel">
+            {[0, 1, 2].map(item => (
+              <div key={item} className="home-featured-slide home-featured-skeleton glass" aria-hidden="true">
+                <div className="skeleton" style={{ height: 150, borderRadius: 8 }} />
+                <div className="skeleton" style={{ width: 86, height: 18, borderRadius: 20 }} />
+                <div className="skeleton" style={{ width: '85%', height: 38 }} />
+                <div className="skeleton" style={{ width: '55%', height: 16 }} />
+                <div className="skeleton" style={{ width: '68%', height: 24 }} />
+                <div className="skeleton" style={{ width: '100%', height: 36, borderRadius: 8 }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="home-section" style={{ background: '#0a0a0f', padding: '100px 0' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 32px' }}>
-        <div style={{ marginBottom: '56px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-            <div style={{ height: '1px', width: '40px', background: '#4f8ef7' }} />
-            <span style={{ fontSize: '12px', color: '#4f8ef7', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Curated Collection</span>
-          </div>
+        <div className="home-section-heading" style={{ marginBottom: '56px' }}>
           <h2 style={{ fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>Featured Products</h2>
         </div>
-        <div className="home-featured-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gridAutoRows: '1fr', alignItems: 'stretch', gap: '24px' }}>
-          {featured.map((product, i) => (
+        <div className="home-featured-carousel">
+          {featured.map(product => (
             <div
+              className="home-featured-slide"
               key={product.id}
-              ref={(el) => { cardRefs.current[i] = el; }}
-              style={{ opacity: 0, transform: 'translateY(40px)', transition: 'opacity 0.6s ease, transform 0.6s ease', height: '100%' }}
             >
               <ProductCard product={product} onClick={() => navigate('product-detail', { productId: product.id })} />
             </div>
@@ -408,7 +379,7 @@ function FeaturedProducts() {
 // ─── How It Works ─────────────────────────────────────────────────────────────
 function HowItWorks() {
   const steps = [
-    { num: '01', title: 'Browse',  desc: 'Explore our curated selection of premium tech products, hand-picked for quality and performance.', img: '/earbuds.jpg' },
+    { num: '01', title: 'Browse',  desc: 'Explore our selection of premium tech products chosen for quality and performance.', img: '/earbuds.jpg' },
     { num: '02', title: 'Order',   desc: 'Secure checkout in seconds. Multiple payment options, fully encrypted transactions.',               img: '/charger.jpg' },
     { num: '03', title: 'Receive', desc: 'Fast, tracked delivery to your door. Premium packaging, genuine products guaranteed.',             img: '/laptop2.jpg' },
   ];
@@ -471,8 +442,8 @@ function CategoriesSection() {
     <section className="home-section" style={{ background: '#111118', padding: '100px 0' }}>
       <div className="section-divider" style={{ marginBottom: '100px' }} />
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 32px' }}>
-        <div style={{ marginBottom: '56px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+        <div className="home-section-heading" style={{ marginBottom: '56px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '16px' }}>
             <div style={{ height: '1px', width: '40px', background: '#4f8ef7' }} />
             <span style={{ fontSize: '12px', color: '#4f8ef7', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Browse By</span>
           </div>
@@ -552,9 +523,9 @@ function StatsSection() {
 // ─── Testimonials ─────────────────────────────────────────────────────────────
 function TestimonialsSection() {
   const testimonials = [
-    { initials:'AK', name:'Alex K.',   location:'New York, US', color:'#4f8ef7', rating:5, text:'Absolutely love my ProBuds X3! The sound quality is incredible and the ANC is top-notch. Delivery was super fast too.' },
+    { initials:'AK', name:'Alex K.',   location:'New York, US', color:'#4f8ef7', rating:5, text:'Absolutely love my ProBuds X3! The sound quality is excellent and the ANC is impressive. Delivery was super fast too.' },
     { initials:'SR', name:'Sarah R.',  location:'London, UK',   color:'#a855f7', rating:5, text:'The UltraHub Pro is a game changer for my desk setup. 12 ports, all working flawlessly. Amazing build quality.' },
-    { initials:'MJ', name:'Marcus J.', location:'Berlin, DE',   color:'#22c55e', rating:5, text:'Ordered the BrightPhone Pro 15 — the camera is stunning. Arrived in 2 days, perfectly packaged. Will order again!' },
+    { initials:'MJ', name:'Marcus J.', location:'Berlin, DE',   color:'#22c55e', rating:5, text:'Ordered the BrightPhone Pro 15. The camera is stunning. It arrived in two days, perfectly packaged. Will order again!' },
   ];
   return (
     <section className="home-section" style={{ background: '#111118', padding: '100px 0' }}>
@@ -612,7 +583,7 @@ function NewsletterSection() {
           <span className="text-gradient">Stay in the loop</span>
         </h2>
         <p style={{ fontSize: '16px', color: '#8892a4', marginBottom: '36px', lineHeight: 1.6 }}>
-          Get exclusive deals, new arrivals, and tech news — straight to your inbox.
+          Get exclusive deals, new arrivals, and tech news sent straight to your inbox.
         </p>
         {subscribed ? (
           <div className="glass" style={{ padding: '20px 32px', borderRadius: '12px', color: '#22c55e', fontWeight: 600 }}>

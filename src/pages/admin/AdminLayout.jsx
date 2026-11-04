@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import {
   LayoutDashboard, Package, ShoppingBag, Users, BarChart2,
-  Settings, LogOut, Zap, Menu, X, Truck, Bell, Search, Sparkles,
+  Settings, LogOut, Menu, X, Truck, Bell, Search, Sparkles,
   ChevronRight, Store, UserCheck, ShieldCheck, Shield, Eye,
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import CurrencySelector from '../../components/CurrencySelector';
+import PageBackButton from '../../components/PageBackButton';
 import { isSampleProduct } from '../../utils/catalog';
 
 const ALL_NAV = [
@@ -49,11 +50,9 @@ export default function AdminLayout({ children, activePage }) {
       {/* Logo */}
       <div style={{ padding:'20px 20px 16px', borderBottom:'1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <div style={{ width:34, height:34, borderRadius:10, background:'linear-gradient(135deg,#2563eb,#7c3aed)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-            <Zap size={16} color="#fff" />
-          </div>
-          <div>
-            <div style={{ fontWeight:800, color:'#fff', fontSize:14, letterSpacing:'-0.02em' }}>SHOPPERCART</div>
+          <img src="/shoppercart-mark.png" alt="" style={{ width:38, height:28, objectFit:'contain', mixBlendMode:'screen' }} />
+          <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
+            <img src="/shoppercart-wordmark.png" alt="Shoppercart" style={{ display:'block', width:112, height:20, objectFit:'contain', mixBlendMode:'screen' }} />
             <div style={{ fontSize:10, color:'#475569', letterSpacing:'0.06em' }}>ADMIN PANEL</div>
           </div>
         </div>
@@ -71,9 +70,9 @@ export default function AdminLayout({ children, activePage }) {
               style={{
                 width:'100%', display:'flex', alignItems:'center', gap:10,
                 padding:'9px 12px', borderRadius:10, marginBottom:2,
-                background: active ? 'rgba(37,99,235,0.18)' : 'transparent',
-                color: active ? '#60a5fa' : '#64748b',
-                border: active ? '1px solid rgba(37,99,235,0.25)' : '1px solid transparent',
+                background: active ? 'rgba(249,115,22,0.18)' : 'transparent',
+                color: active ? '#fb923c' : '#64748b',
+                border: active ? '1px solid rgba(249,115,22,0.28)' : '1px solid transparent',
                 cursor:'pointer', fontSize:13, fontWeight: active ? 600 : 500,
                 transition:'all 0.15s',
               }}
@@ -133,6 +132,7 @@ export default function AdminLayout({ children, activePage }) {
           <button className="admin-topbar-hamburger" aria-label={open ? 'Close admin navigation' : 'Open admin navigation'} aria-expanded={open} onClick={() => setOpen(value => !value)} style={{ padding:6, borderRadius:8, background:'#f1f5f9', border:'none', cursor:'pointer', display:'flex', flexShrink:0 }}>
             <Menu size={18} color="#64748b" />
           </button>
+          <PageBackButton className="admin-topbar-back" />
 
           {/* Page title */}
           <div className="admin-topbar-heading">

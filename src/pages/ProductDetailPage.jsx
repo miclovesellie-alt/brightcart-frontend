@@ -12,7 +12,7 @@ const GUARANTEES = [
 ];
 
 export default function ProductDetailPage() {
-  const { products, pageParams, navigate, addToCart } = useStore();
+  const { products, pageParams, navigate, addToCart, canGoBack, goBack } = useStore();
   const { format } = useCurrency();
   const product = products.find(p => p.id === pageParams.productId) || products[0];
   const colorVariants = Array.isArray(product?.variants)
@@ -61,12 +61,13 @@ export default function ProductDetailPage() {
   }
 
   return (
-    <div style={{ background: '#0a0a0f', minHeight: '100vh', paddingTop: '80px' }}>
+    <div className="product-detail-page" style={{ background: '#0a0a0f', minHeight: '100vh', paddingTop: '80px' }}>
       <div className="product-detail-page__content" style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 32px' }}>
 
         {/* Back button */}
         <button
-          onClick={() => navigate('products')}
+          className="product-detail-back"
+          onClick={() => canGoBack ? goBack() : navigate('products')}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -83,7 +84,7 @@ export default function ProductDetailPage() {
           onMouseEnter={e => e.currentTarget.style.color = '#fff'}
           onMouseLeave={e => e.currentTarget.style.color = '#8892a4'}
         >
-          <ArrowLeft size={16} /> Back to Products
+          <ArrowLeft size={16} /> {canGoBack ? 'Back' : 'Back to Products'}
         </button>
 
         {/* Main Layout */}
@@ -94,7 +95,7 @@ export default function ProductDetailPage() {
           marginBottom: '80px',
         }}>
           {/* LEFT: Image */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div className="product-detail-page__media" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <div className="glass product-detail-image-frame" style={{
               borderRadius: '20px',
               padding: '32px',
@@ -131,7 +132,7 @@ export default function ProductDetailPage() {
           </div>
 
           {/* RIGHT: Info */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div className="product-detail-page__summary" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             {/* Category badge */}
             <span style={{
               alignSelf: 'flex-start',
@@ -208,8 +209,8 @@ export default function ProductDetailPage() {
                         onClick={() => { setSelectedColorKey(key); setQty(1); }}
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 10px',
-                          borderRadius: 999, border: `1px solid ${active ? '#4f8ef7' : 'rgba(255,255,255,.14)'}`,
-                          background: active ? 'rgba(79,142,247,.14)' : 'rgba(255,255,255,.04)',
+                          borderRadius: 999, border: `1px solid ${active ? '#f97316' : 'rgba(255,255,255,.14)'}`,
+                          background: active ? 'rgba(249,115,22,.14)' : 'rgba(255,255,255,.04)',
                           color: '#fff', cursor: 'pointer', fontSize: 13,
                         }}
                       >
@@ -226,12 +227,12 @@ export default function ProductDetailPage() {
             )}
 
             {/* Description */}
-            <p style={{ fontSize: '15px', color: '#8892a4', lineHeight: 1.8 }}>
+            <p className="product-detail-page__description" style={{ fontSize: '15px', color: '#8892a4', lineHeight: 1.8 }}>
               {product.description}
             </p>
 
             {/* Quantity */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div className="product-detail-page__quantity" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               <span style={{ color: '#8892a4', fontSize: '14px', fontWeight: 500 }}>Quantity</span>
               <div style={{
                 display: 'flex',
@@ -288,7 +289,7 @@ export default function ProductDetailPage() {
                 style={{
                   flex: 1,
                   justifyContent: 'center',
-                  background: added ? 'rgba(34,197,94,0.3)' : '#4f8ef7',
+                  background: added ? 'rgba(34,197,94,0.3)' : '#f97316',
                   boxShadow: added ? 'none' : undefined,
                 }}
               >
@@ -319,7 +320,7 @@ export default function ProductDetailPage() {
         {specs.length > 0 && (
           <div style={{ marginBottom: '80px' }}>
           <h2 style={{ fontSize: '24px', fontWeight: 700, color: '#fff', marginBottom: '24px' }}>Tech Specifications</h2>
-          <div style={{
+              <div className="product-detail-related-grid" style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: '16px',

@@ -1,6 +1,5 @@
 import { useStore } from '../context/StoreContext';
-import { Zap, Globe, Code2, Camera, Briefcase } from 'lucide-react';
-const [Twitter, Github, Instagram, Linkedin] = [Globe, Code2, Camera, Briefcase];
+import { Zap, Facebook, Instagram, Mail, MessageCircle, Music2, Twitter, Youtube } from 'lucide-react';
 
 const FOOTER_LINKS = {
   Shop: ['All Products', 'Phones', 'Phone Accessories', 'Laptop Accessories', 'Electrical', 'New Arrivals'],
@@ -10,8 +9,16 @@ const FOOTER_LINKS = {
 };
 
 export default function Footer() {
-  const { navigate } = useStore();
+  const { navigate, storeContacts = {} } = useStore();
   const year = new Date().getFullYear();
+  const whatsappNumber = String(storeContacts.whatsappNumber || '').replace(/\D/g, '');
+  const socialLinks = [
+    { key: 'instagram', label: 'Instagram', icon: Instagram },
+    { key: 'facebook', label: 'Facebook', icon: Facebook },
+    { key: 'tiktok', label: 'TikTok', icon: Music2 },
+    { key: 'youtube', label: 'YouTube', icon: Youtube },
+    { key: 'x', label: 'X', icon: Twitter },
+  ].filter(item => storeContacts.socials?.[item.key]);
 
   return (
     <footer style={{
@@ -38,18 +45,22 @@ export default function Footer() {
               <span style={{ color:'#fff', fontSize:'20px', fontWeight:800, letterSpacing:'-0.5px' }}>Shoppercart</span>
             </button>
             <p style={{ color:'#4a5568', fontSize:'14px', maxWidth:'260px', lineHeight:1.6 }}>
-              Premium tech delivered to your door. Curated for the modern world.
+              Quality tech, delivered straight to your door.
             </p>
+            <div style={{ display:'grid', gap:8, marginTop:14 }}>
+              {storeContacts.supportEmail && <a href={`mailto:${storeContacts.supportEmail}`} style={{ display:'inline-flex', alignItems:'center', gap:8, color:'#8892a4', fontSize:13, textDecoration:'none' }}><Mail size={14} />{storeContacts.supportEmail}</a>}
+              {whatsappNumber && <a href={`https://wa.me/${whatsappNumber}`} target="_blank" rel="noreferrer" style={{ display:'inline-flex', alignItems:'center', gap:8, color:'#8892a4', fontSize:13, textDecoration:'none' }}><MessageCircle size={14} />Chat with us on WhatsApp</a>}
+            </div>
           </div>
 
           {/* Social links */}
           <div style={{ display:'flex', gap:'12px' }}>
-            {[Twitter, Github, Instagram, Linkedin].map((Icon, i) => (
-              <button key={i} style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', color:'rgba(255,255,255,0.5)', width:'36px', height:'36px', borderRadius:'8px', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s ease' }}
-                onMouseEnter={e => { e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='rgba(79,142,247,0.4)'; e.currentTarget.style.background='rgba(79,142,247,0.1)'; }}
+            {socialLinks.map(({ key, label, icon: Icon }) => (
+              <a key={key} href={storeContacts.socials[key]} aria-label={label} title={label} target="_blank" rel="noreferrer" style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', color:'rgba(255,255,255,0.5)', width:'36px', height:'36px', borderRadius:'8px', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'all 0.2s ease' }}
+                onMouseEnter={e => { e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='rgba(249,115,22,0.55)'; e.currentTarget.style.background='rgba(249,115,22,0.16)'; }}
                 onMouseLeave={e => { e.currentTarget.style.color='rgba(255,255,255,0.5)'; e.currentTarget.style.borderColor='rgba(255,255,255,0.08)'; e.currentTarget.style.background='rgba(255,255,255,0.05)'; }}>
                 <Icon size={15} />
-              </button>
+              </a>
             ))}
           </div>
         </div>
@@ -76,7 +87,7 @@ export default function Footer() {
           ))}
         </div>
 
-        {/* Bottom bar — copyright only, no admin button */}
+        {/* Bottom bar: copyright only, no admin button */}
         <div className="section-divider" style={{ marginBottom:'24px' }} />
         <div style={{ display:'flex', justifyContent:'center', alignItems:'center' }}>
           <p style={{ color:'#4a5568', fontSize:'13px' }}>

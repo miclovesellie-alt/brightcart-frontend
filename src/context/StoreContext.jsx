@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { api } from '../utils/api';
 import { getStorefrontProducts } from '../utils/catalog';
 import {
@@ -20,10 +20,22 @@ function sessionSet(key, value) {
   try { sessionStorage.setItem(key, JSON.stringify(value)); } catch {}
 }
 
+function cachedPublicProducts() {
+  try {
+    const cached = JSON.parse(localStorage.getItem('shoppercart_public_products_v1') || 'null');
+    if (!cached || Date.now() - Number(cached.savedAt || 0) > 7 * 24 * 60 * 60 * 1000) return [];
+    return getStorefrontProducts(cached.products);
+  } catch { return []; }
+}
+
+const EMPTY_STORE_CONTACTS = { supportEmail: '', whatsappNumber: '', socials: {} };
+
 const StoreContext = createContext(null);
 
 export function StoreProvider({ children }) {
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState(cachedPublicProducts);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [storeContacts, setStoreContacts] = useState(EMPTY_STORE_CONTACTS);
   const [adminProducts, setAdminProducts] = useState([]);
   const [cart, setCart] = useState([]);
   // The cached user is for immediate rendering; /auth/me validates the server session on load.
@@ -32,13 +44,39 @@ export function StoreProvider({ children }) {
   const [adminUsers, setAdminUsers] = useState([]);
   const [page, setPage] = useState(() => sessionGet('brightcart_page', 'home'));
   const [pageParams, setPageParams] = useState(() => sessionGet('brightcart_page_params', {}));
+  const [pageHistory, setPageHistory] = useState(() => {
+    const history = sessionGet('brightcart_page_history', []);
+    return Array.isArray(history) ? history.filter(item => item && typeof item.page === 'string') : [];
+  });
+  const pageRef = useRef(page);
+  const pageParamsRef = useRef(pageParams);
+  const pageHistoryRef = useRef(pageHistory);
+  pageRef.current = page;
+  pageParamsRef.current = pageParams;
+  pageHistoryRef.current = pageHistory;
 
   // The public catalog never includes draft products.
   useEffect(() => {
     let active = true;
     api.getProducts().then(result => {
-      if (active) setProducts(getStorefrontProducts(result.data));
-    }).catch(error => console.warn('Shoppercart catalog could not be loaded:', error.message));
+      if (active) {
+        const publicProducts = getStorefrontProducts(result.data);
+        setProducts(publicProducts);
+        setCatalogLoading(false);
+        try { localStorage.setItem('shoppercart_public_products_v1', JSON.stringify({ savedAt: Date.now(), products: publicProducts })); } catch {}
+      }
+    }).catch(error => {
+      if (active) setCatalogLoading(false);
+      console.warn('Shoppercart catalog could not be loaded:', error.message);
+    });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    api.getStoreSettings().then(result => {
+      if (active) setStoreContacts({ ...EMPTY_STORE_CONTACTS, ...(result.data || {}) });
+    }).catch(error => console.warn('Shoppercart store contact settings could not be loaded:', error.message));
     return () => { active = false; };
   }, []);
 
@@ -96,6 +134,7 @@ export function StoreProvider({ children }) {
   // Keep page routing in sessionStorage
   useEffect(() => { sessionSet('brightcart_page', page); }, [page]);
   useEffect(() => { sessionSet('brightcart_page_params', pageParams); }, [pageParams]);
+  useEffect(() => { sessionSet('brightcart_page_history', pageHistory); }, [pageHistory]);
 
   // Start idle watchdog when an admin logs in; stop it on logout
   useEffect(() => {
@@ -104,6 +143,13 @@ export function StoreProvider({ children }) {
         destroySessionToken();
         setUserState(null);
         sessionSet('brightcart_page', 'home');
+        sessionSet('brightcart_page_params', {});
+        sessionSet('brightcart_page_history', []);
+        pageRef.current = 'home';
+        pageParamsRef.current = {};
+        pageHistoryRef.current = [];
+        setPageParams({});
+        setPageHistory([]);
         setPage('home');
       });
     } else {
@@ -113,8 +159,39 @@ export function StoreProvider({ children }) {
   }, [user?.role]);
 
   const navigate = useCallback((newPage, params = {}) => {
+    const nextParams = params || {};
+    const currentPage = pageRef.current;
+    const currentParams = pageParamsRef.current || {};
+    if (currentPage !== newPage || JSON.stringify(currentParams) !== JSON.stringify(nextParams)) {
+      const nextHistory = [...pageHistoryRef.current, { page: currentPage, pageParams: currentParams }].slice(-40);
+      pageHistoryRef.current = nextHistory;
+      setPageHistory(nextHistory);
+    }
+    pageRef.current = newPage;
+    pageParamsRef.current = nextParams;
     setPage(newPage);
-    setPageParams(params);
+    setPageParams(nextParams);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const goBack = useCallback(() => {
+    const history = pageHistoryRef.current;
+    const previous = history[history.length - 1];
+    if (previous) {
+      const nextHistory = history.slice(0, -1);
+      const nextParams = previous.pageParams || {};
+      pageHistoryRef.current = nextHistory;
+      pageRef.current = previous.page;
+      pageParamsRef.current = nextParams;
+      setPageHistory(nextHistory);
+      setPage(previous.page);
+      setPageParams(nextParams);
+    } else if (pageRef.current !== 'home') {
+      pageRef.current = 'home';
+      pageParamsRef.current = {};
+      setPage('home');
+      setPageParams({});
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
@@ -229,11 +306,17 @@ export function StoreProvider({ children }) {
     destroySessionToken();
     sessionStorage.removeItem('brightcart_page');
     sessionStorage.removeItem('brightcart_page_params');
+    sessionStorage.removeItem('brightcart_page_history');
+    pageHistoryRef.current = [];
+    pageRef.current = 'home';
+    pageParamsRef.current = {};
     setUserState(null);
     setOrders([]);
     setAdminProducts([]);
     setAdminUsers([]);
     setPage('home');
+    setPageParams({});
+    setPageHistory([]);
   }, []);
 
   // Keep storefront products and the admin draft catalog separate.
@@ -283,12 +366,19 @@ export function StoreProvider({ children }) {
     return saved;
   }, []);
 
+  const updateStoreContacts = useCallback(async patch => {
+    const result = await api.updateAdminStoreSettings(patch);
+    setStoreContacts(current => ({ ...current, supportEmail: result.data.supportEmail, whatsappNumber: result.data.whatsappNumber, socials: result.data.socials || {} }));
+    return result;
+  }, []);
+
   const cartCount = cart.reduce((sum, item) => sum + item.qty, 0);
   const cartTotal = cart.reduce((sum, item) => sum + Number(item.product.price || 0) * item.qty, 0);
 
   return (
     <StoreContext.Provider value={{
       products,
+      catalogLoading,
       adminProducts,
       cart,
       cartCount,
@@ -297,7 +387,11 @@ export function StoreProvider({ children }) {
       orders,
       page,
       pageParams,
+      storeContacts,
+      updateStoreContacts,
+      canGoBack: pageHistory.length > 0 || page !== 'home',
       navigate,
+      goBack,
       addToCart,
       removeFromCart,
       updateQty,

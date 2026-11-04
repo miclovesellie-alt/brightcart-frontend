@@ -37,7 +37,7 @@ const EMPTY_CANDIDATE = {
 const cardStyle = { background: '#fff', border: '1px solid #e8edf3', borderRadius: 14 };
 const labelStyle = { display: 'block', fontSize: 10, fontWeight: 800, letterSpacing: '.08em', color: '#64748b', marginBottom: 6 };
 const inputStyle = { width: '100%', minHeight: 40, border: '1px solid #dbe3ed', borderRadius: 9, padding: '9px 11px', color: '#0f172a', background: '#fff', fontSize: 12, outline: 'none', boxSizing: 'border-box' };
-const buttonStyle = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, border: 0, borderRadius: 9, padding: '9px 13px', background: '#2563eb', color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer' };
+const buttonStyle = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, border: 0, borderRadius: 9, padding: '9px 13px', background: '#f97316', color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer' };
 const secondaryStyle = { ...buttonStyle, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #dbeafe' };
 
 function MetricCard({ label, value, note, icon: Icon, tone = 'blue' }) {

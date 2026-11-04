@@ -23,13 +23,12 @@ const SORT_OPTIONS = [
 
 function SkeletonCard() {
   return (
-    <div className="glass" style={{ borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-      <div className="skeleton" style={{ height: '200px', borderRadius: '8px' }} />
+    <div className="glass" style={{ borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div className="skeleton" style={{ height: '160px', borderRadius: '8px' }} />
       <div className="skeleton" style={{ height: '16px', width: '60px', borderRadius: '100px' }} />
-      <div className="skeleton" style={{ height: '18px', width: '80%' }} />
-      <div className="skeleton" style={{ height: '14px', width: '40%' }} />
-      <div className="skeleton" style={{ height: '24px', width: '50%' }} />
-      <div className="skeleton" style={{ height: '40px' }} />
+      <div className="skeleton" style={{ height: '36px', width: '82%' }} />
+      <div className="skeleton" style={{ height: '14px', width: '45%' }} />
+      <div className="skeleton" style={{ height: '24px', width: '58%' }} />
     </div>
   );
 }
@@ -38,8 +37,12 @@ function ProductCard({ product, onClick }) {
   const { addToCart } = useStore();
   const { format } = useCurrency();
   const [added, setAdded] = useState(false);
-  const [nameExpanded, setNameExpanded] = useState(false);
   const hasColorOptions = Array.isArray(product.variants) && product.variants.some(variant => variant?.color || variant?.name);
+  const nameWords = String(product.name || '').trim().split(/\s+/).filter(Boolean);
+  const shortName = `${nameWords.slice(0, 4).join(' ')}${nameWords.length > 4 ? '…' : ''}`;
+  const rating = Number(product.rating);
+  const hasRating = Number.isFinite(rating) && rating > 0;
+  const reviews = Number(product.reviews);
 
   const categoryColors = {
     phones: { bg: 'rgba(79,142,247,0.15)', color: '#4f8ef7' },
@@ -48,42 +51,37 @@ function ProductCard({ product, onClick }) {
     electrical: { bg: 'rgba(34,197,94,0.15)', color: '#22c55e' },
   };
   const colors = categoryColors[product.category] || categoryColors.phones;
-  const tagText = typeof product.tag === 'string' ? product.tag.trim() : '';
-  const tagWithoutProtocol = tagText.replace(/^https?:\/\//i, '');
-  const tagIsUrl = /^[a-z0-9.-]+\.[a-z]{2,}(?:[/:?#]|$)/i.test(tagWithoutProtocol);
-  const tagLabel = tagIsUrl
-    ? tagWithoutProtocol.split(/[/?#]/)[0].replace(/^www\./i, '')
-    : tagText;
-
-  const handleNameClick = (event) => {
-    const isSmallScreen = window.matchMedia('(max-width: 767px)').matches;
-    const isClamped = event.currentTarget.scrollHeight > event.currentTarget.clientHeight + 1;
-    if (isSmallScreen && isClamped && !nameExpanded) {
-      event.stopPropagation();
-      setNameExpanded(true);
+  const handleAddToCart = event => {
+    event.stopPropagation();
+    if (hasColorOptions) {
+      onClick?.();
+      return;
     }
-  };
-
-  const handleAddToCart = (e) => {
-    e.stopPropagation();
-    if (hasColorOptions) { onClick?.(); return; }
     addToCart(product, 1);
     setAdded(true);
-    setTimeout(() => setAdded(false), 1500);
+    window.setTimeout(() => setAdded(false), 1500);
   };
-
   return (
     <div
       className="glass"
+      role="group"
+      tabIndex={0}
+      aria-label={`View ${product.name} details`}
       onClick={onClick}
+      onKeyDown={event => {
+        if (event.target === event.currentTarget && event.key === 'Enter') {
+          event.preventDefault();
+          onClick?.();
+        }
+      }}
       style={{
         borderRadius: '16px',
-        padding: '24px',
+        padding: '16px',
         cursor: 'pointer',
         transition: 'all 0.3s ease',
         display: 'flex',
         flexDirection: 'column',
-        gap: '14px',
+        gap: '10px',
         height: '100%',
         boxSizing: 'border-box',
       }}
@@ -98,10 +96,9 @@ function ProductCard({ product, onClick }) {
         e.currentTarget.style.boxShadow = 'none';
       }}
     >
-      <ProductImageGallery product={product} alt={product.name} className="product-img-wrap" style={{ height: '200px', background: '#111118', borderRadius: '8px' }} imageStyle={{ padding: '12px', transition: 'transform 0.4s ease' }} />
+      <ProductImageGallery product={product} alt={product.name} className="product-img-wrap" showControls={false} scrollable={false} swipeable={false} style={{ height: '160px', background: '#111118', borderRadius: '8px' }} imageStyle={{ padding: '10px', transition: 'transform 0.4s ease' }} />
 
-      {tagLabel ? (
-        <span style={{
+      <span style={{
           alignSelf: 'flex-start',
           minHeight: '18px',
           padding: '3px 10px',
@@ -117,71 +114,46 @@ function ProductCard({ product, onClick }) {
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
         }}>
-          {tagLabel}
-        </span>
-      ) : <span aria-hidden="true" style={{ minHeight: '18px' }} />}
+          {categoryLabel(product.category)}
+      </span>
 
-      <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#fff', lineHeight: 1.4 }}>
-        <button
-          type="button"
-          className={`product-card-name${nameExpanded ? ' is-expanded' : ''}`}
-          aria-expanded={nameExpanded}
-          onClick={handleNameClick}
-        >
-          {product.name}
-        </button>
+      <h3 className="product-card-title" style={{ fontSize: '15px', fontWeight: 600, color: '#fff', lineHeight: 1.35, margin: 0 }}>
+        {shortName}
       </h3>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex' }}>
           {[...Array(5)].map((_, i) => (
-            <Star key={i} size={12} fill={i < Math.floor(product.rating) ? '#f6c90e' : 'none'} color={i < Math.floor(product.rating) ? '#f6c90e' : '#4a5568'} />
+            <Star key={i} size={12} fill={hasRating && i < Math.floor(rating) ? '#f6c90e' : 'none'} color={hasRating && i < Math.floor(rating) ? '#f6c90e' : '#4a5568'} />
           ))}
         </div>
-        <span style={{ fontSize: '12px', color: '#8892a4' }}>({product.reviews})</span>
+        <span style={{ fontSize: '12px', color: '#8892a4' }}>
+          {hasRating ? rating.toFixed(1) : 'Not rated'}
+          {Number.isFinite(reviews) && reviews > 0 ? ` (${reviews})` : ''}
+        </span>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
         <span style={{ fontSize: '20px', fontWeight: 700, color: '#fff' }}>{format(product.price)}</span>
         {product.originalPrice && (
           <span style={{ fontSize: '13px', color: '#4a5568', textDecoration: 'line-through' }}>{format(product.originalPrice)}</span>
         )}
       </div>
-
       <button
+        type="button"
         onClick={handleAddToCart}
         style={{
-          width: '100%',
-          marginTop: 'auto',
-          padding: '10px',
-          background: added ? 'rgba(34,197,94,0.2)' : '#4f8ef7',
-          border: 'none',
-          borderRadius: '8px',
-          color: '#fff',
-          fontSize: '13px',
-          fontWeight: 600,
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '8px',
-          transition: 'all 0.3s ease',
+          width: '100%', marginTop: 'auto', padding: '9px 10px',
+          background: added ? '#16a34a' : '#f97316', border: 'none', borderRadius: '8px',
+          color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+          transition: 'all 0.2s ease',
         }}
-        onMouseEnter={(e) => {
-          if (!added) {
-            e.currentTarget.style.background = '#3d7ef5';
-            e.currentTarget.style.boxShadow = '0 0 25px rgba(79,142,247,0.4)';
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!added) {
-            e.currentTarget.style.background = '#4f8ef7';
-            e.currentTarget.style.boxShadow = 'none';
-          }
-        }}
+        onMouseEnter={event => { if (!added) event.currentTarget.style.background = '#ea580c'; }}
+        onMouseLeave={event => { if (!added) event.currentTarget.style.background = '#f97316'; }}
       >
         <ShoppingCart size={14} />
-        {hasColorOptions ? 'Choose a Color' : added ? '✓ Added!' : 'Add to Cart'}
+        {hasColorOptions ? 'Choose a Color' : added ? 'Added to Cart' : 'Add to Cart'}
       </button>
     </div>
   );

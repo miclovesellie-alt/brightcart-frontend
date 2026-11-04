@@ -59,7 +59,7 @@ export default function AdminCustomers() {
           <td style={{ padding: '11px 14px', fontWeight: 700, color: '#0f172a', textAlign: 'center' }}>{customer.orders.length}</td>
           <td style={{ padding: '11px 14px', fontWeight: 800, color: '#2563eb' }}>{format(customer.paidSpend)}</td>
           <td style={{ padding: '11px 14px', color: '#64748b', whiteSpace: 'nowrap', fontSize: 11 }}>{displayDate(getOrderDate(customer.latestOrder))}</td>
-          <td style={{ padding: '11px 14px' }}><button onClick={() => setSelected(customer)} style={{ padding: '4px 10px', borderRadius: 6, background: '#eff6ff', border: 'none', color: '#2563eb', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>View</button></td>
+          <td style={{ padding: '11px 14px' }}><button onClick={() => setSelected(customer)} style={{ padding: '4px 10px', borderRadius: 6, background: '#fff7ed', border: 'none', color: '#c2410c', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>View</button></td>
         </tr>)}</tbody>
       </table></div></div>
 
