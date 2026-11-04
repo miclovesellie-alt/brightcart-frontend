@@ -68,6 +68,7 @@ export const api = {
   async getResearch() { return request('/dropship/research'); },
   async extractDropshipProduct(input) { return request('/dropship/research/extract', { method: 'POST', body: body(input) }); },
   async createResearch(candidate) { return request('/dropship/research', { method: 'POST', body: body(candidate) }); },
+  async deleteResearch(id) { return request(`/dropship/research/${encodeURIComponent(id)}`, { method: 'DELETE' }); },
   async generateProductContent(id) { return request(`/dropship/research/${encodeURIComponent(id)}/generate-content`, { method: 'POST', body: body({}) }); },
   async importResearch(id, updateExisting = false) { return request(`/dropship/research/${encodeURIComponent(id)}/import`, { method: 'POST', body: body({ updateExisting }) }); },
   async publishDraft(id, checks) { return request(`/dropship/products/${encodeURIComponent(id)}/publish`, { method: 'POST', body: body(checks) }); },
@@ -75,3 +76,4 @@ export const api = {
   async recordSupplierPurchase(orderId, purchase) { return request(`/dropship/orders/${encodeURIComponent(orderId)}/purchases`, { method: 'POST', body: body(purchase) }); },
   async confirmPayment(orderId, confirmation) { return request(`/dropship/orders/${encodeURIComponent(orderId)}/confirm-payment`, { method: 'POST', body: body(confirmation) }); },
 };
+
