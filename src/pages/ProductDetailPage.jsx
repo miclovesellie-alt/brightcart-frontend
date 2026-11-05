@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { useCurrency } from '../context/CurrencyContext';
+import { api } from '../utils/api';
 import ProductImageGallery from '../components/ProductImageGallery';
 import { categoryLabel, categorySlug } from '../utils/productImages';
 import { Star, ShoppingCart, Heart, ArrowLeft, Shield, Truck, RefreshCw, Package } from 'lucide-react';
@@ -13,7 +14,7 @@ const GUARANTEES = [
 ];
 
 export default function ProductDetailPage() {
-  const { products, pageParams, navigate, addToCart } = useStore();
+  const { products, pageParams, navigate, addToCart, wishlistIds = [], toggleWishlist, user, orders = [] } = useStore();
   const { format } = useCurrency();
   const product = products.find(p => p.id === pageParams.productId) || products[0];
   const colorVariants = Array.isArray(product?.variants)
@@ -22,7 +23,17 @@ export default function ProductDetailPage() {
   const [selectedColorKey, setSelectedColorKey] = useState('');
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
-  const [wishlisted, setWishlisted] = useState(false);
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewTitle, setReviewTitle] = useState('');
+  const [reviewBody, setReviewBody] = useState('');
+  const [reviewOrderId, setReviewOrderId] = useState('');
+  const [reviewMessage, setReviewMessage] = useState('');
+  const [reviewError, setReviewError] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  const wishlisted = wishlistIds.includes(String(product?.id));
   const variantKey = variant => String(variant?.id || variant?.color || variant?.name || '').trim().toLowerCase();
   const selectedVariant = colorVariants.find(variant => variantKey(variant) === selectedColorKey) || colorVariants[0] || null;
   const currentStock = Number(selectedVariant?.stock ?? product?.stock ?? 0);
@@ -43,9 +54,61 @@ export default function ProductDetailPage() {
   const specs = Array.isArray(product?.specifications)
     ? product.specifications.filter(spec => spec && typeof spec.label === 'string' && typeof spec.value === 'string')
     : [];
-  const discount = product?.originalPrice
-    ? Math.round((1 - product.price / product.originalPrice) * 100)
+  const currentPrice = selectedVariant?.price != null && Number(selectedVariant.price) > 0 ? Number(selectedVariant.price) : Number(product?.price || 0);
+  const currentOriginalPrice = selectedVariant?.originalPrice != null ? Number(selectedVariant.originalPrice) : Number(product?.originalPrice || 0);
+  const discount = currentOriginalPrice > currentPrice
+    ? Math.round((1 - currentPrice / currentOriginalPrice) * 100)
     : null;
+
+  const eligibleReviewOrders = orders.filter(order => order.paymentStatus === 'paid'
+    && !['cancelled', 'canceled', 'refunded'].includes(String(order.status || '').toLowerCase())
+    && (order.items || []).some(item => Number(item.product?.id ?? item.productId) === Number(product?.id)));
+
+  useEffect(() => {
+    if (!product?.id) return undefined;
+    let active = true;
+    setReviewsLoading(true);
+    setReviewSubmitted(false);
+    setReviewMessage('');
+    api.getProductReviews(product.id)
+      .then(result => { if (active) setReviews(Array.isArray(result.data) ? result.data : []); })
+      .catch(() => { if (active) setReviews([]); })
+      .finally(() => { if (active) setReviewsLoading(false); });
+    if (user?.id && user.role === 'customer') {
+      api.getAccountReviews(product.id).then(result => {
+        if (!active) return;
+        const existing = Array.isArray(result.data) ? result.data[0] : null;
+        if (existing) {
+          setReviewSubmitted(true);
+          setReviewMessage(`Your review is ${existing.status} and cannot be submitted again.`);
+        }
+      }).catch(() => {});
+    }
+    return () => { active = false; };
+  }, [product?.id, user?.id, user?.role]);
+
+  async function submitReview(event) {
+    event.preventDefault();
+    setReviewSubmitting(true);
+    setReviewError('');
+    setReviewMessage('');
+    try {
+      const result = await api.createProductReview(product.id, {
+        rating: reviewRating,
+        title: reviewTitle,
+        body: reviewBody,
+        orderId: reviewOrderId || eligibleReviewOrders[0]?.id,
+      });
+      setReviewSubmitted(true);
+      setReviewMessage(result.data?.message || 'Your verified review was sent for approval.');
+      setReviewTitle('');
+      setReviewBody('');
+    } catch (error) {
+      setReviewError(error.message || 'Could not submit this review.');
+    } finally {
+      setReviewSubmitting(false);
+    }
+  }
 
   const handleAddToCart = () => {
     addToCart(product, qty, selectedVariant);
@@ -174,10 +237,10 @@ export default function ProductDetailPage() {
 
             {/* Price */}
             <div className="product-detail-page__price" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '20px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <span style={{ fontSize: '36px', fontWeight: 900, color: '#fff' }}>{format(product.price)}</span>
-              {product.originalPrice && (
+                  <span style={{ fontSize: '36px', fontWeight: 900, color: '#fff' }}>{format(currentPrice)}</span>
+                  {currentOriginalPrice > currentPrice && (
                 <>
-                  <span style={{ fontSize: '20px', color: '#4a5568', textDecoration: 'line-through' }}>{format(product.originalPrice)}</span>
+                  <span style={{ fontSize: '20px', color: '#4a5568', textDecoration: 'line-through' }}>{format(currentOriginalPrice)}</span>
                   <span style={{
                     padding: '4px 10px',
                     background: 'rgba(34,197,94,0.15)',
@@ -195,12 +258,12 @@ export default function ProductDetailPage() {
             {colorVariants.length > 0 && (
               <fieldset className="product-detail-page__colors" style={{ border: 0, padding: 0, margin: 0 }}>
                 <legend style={{ color: '#8892a4', fontSize: '14px', fontWeight: 600, marginBottom: 10 }}>
-                  Color{selectedVariant?.color || selectedVariant?.name ? `: ${selectedVariant.color || selectedVariant.name}` : ''}
+                  Option{selectedVariant?.name || selectedVariant?.color ? `: ${selectedVariant.name || selectedVariant.color}` : ''}
                 </legend>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {colorVariants.map(variant => {
                     const key = variantKey(variant);
-                    const label = String(variant.color || variant.name);
+                    const label = String(variant.name || variant.color);
                     const active = variantKey(selectedVariant) === key;
                     return (
                       <button
@@ -218,7 +281,7 @@ export default function ProductDetailPage() {
                       >
                         <span aria-hidden="true" style={{
                           width: 14, height: 14, borderRadius: '50%', border: '1px solid rgba(255,255,255,.35)',
-                          background: variant.hexColor || variant.colorHex || label,
+                          background: variant.hexColor || variant.colorHex || variant.color || '#334155',
                         }} />
                         {label}
                       </button>
@@ -299,7 +362,9 @@ export default function ProductDetailPage() {
                 {added ? '✓ Added to Cart!' : 'Add to Cart'}
               </button>
               <button
-                onClick={() => setWishlisted(!wishlisted)}
+                onClick={() => toggleWishlist(product.id)}
+                aria-label={wishlisted ? 'Remove from saved items' : 'Save item for later'}
+                title={wishlisted ? 'Remove from saved items' : 'Save item for later'}
                 style={{
                   padding: '12px 16px',
                   background: wishlisted ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.04)',
@@ -336,6 +401,43 @@ export default function ProductDetailPage() {
           </div>
           </div>
         )}
+
+        <section aria-labelledby="product-reviews-heading" style={{ marginBottom: '68px' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: 18 }}>
+            <h2 id="product-reviews-heading" style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0 }}>Customer reviews</h2>
+            <span style={{ color: '#8892a4', fontSize: 13 }}>{reviews.length} verified review{reviews.length === 1 ? '' : 's'}</span>
+          </div>
+          <div className="glass" style={{ borderRadius: 14, padding: 18, marginBottom: 14 }}>
+            {!user ? <p style={{ color: '#aeb8c8', fontSize: 13, margin: 0 }}>Sign in after purchasing this item to leave a verified review. <button onClick={() => navigate('account')} style={{ border: 0, padding: 0, background: 'none', color: '#fb923c', cursor: 'pointer', fontWeight: 700 }}>Sign in</button></p>
+              : user.role !== 'customer' ? <p style={{ color: '#8892a4', fontSize: 13, margin: 0 }}>Reviews are submitted by customer accounts after a paid purchase.</p>
+                : reviewSubmitted ? <p role="status" style={{ color: '#86efac', fontSize: 13, margin: 0 }}>{reviewMessage}</p>
+                  : eligibleReviewOrders.length ? <form onSubmit={submitReview} style={{ display: 'grid', gap: 11 }}>
+                    <strong style={{ color: '#fff', fontSize: 14 }}>Share your experience as a verified buyer</strong>
+                    <label style={{ display: 'grid', gap: 5, color: '#aeb8c8', fontSize: 12 }}>Purchase
+                      <select value={reviewOrderId || eligibleReviewOrders[0].id} onChange={event => setReviewOrderId(event.target.value)} style={{ width: '100%', maxWidth: 420, padding: '9px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,.12)', background: '#111118', color: '#fff' }}>
+                        {eligibleReviewOrders.map(order => <option key={order.id} value={order.id}>Order {order.id}</option>)}
+                      </select>
+                    </label>
+                    <div role="radiogroup" aria-label="Review rating" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      {[1, 2, 3, 4, 5].map(value => <button key={value} type="button" role="radio" aria-checked={reviewRating === value} aria-label={`${value} star${value === 1 ? '' : 's'}`} onClick={() => setReviewRating(value)} style={{ border: 0, padding: 3, background: 'transparent', cursor: 'pointer' }}><Star size={20} fill={value <= reviewRating ? '#f6c90e' : 'none'} color={value <= reviewRating ? '#f6c90e' : '#4a5568'} /></button>)}
+                      <span style={{ color: '#8892a4', fontSize: 12, marginLeft: 6 }}>{reviewRating} out of 5</span>
+                    </div>
+                    <input required maxLength="100" value={reviewTitle} onChange={event => setReviewTitle(event.target.value)} placeholder="Short review title" style={{ width: '100%', maxWidth: 620, boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,.12)', background: 'rgba(255,255,255,.04)', color: '#fff' }} />
+                    <textarea required minLength="10" maxLength="1500" rows="4" value={reviewBody} onChange={event => setReviewBody(event.target.value)} placeholder="What should other shoppers know about this item?" style={{ width: '100%', maxWidth: 620, boxSizing: 'border-box', resize: 'vertical', padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,.12)', background: 'rgba(255,255,255,.04)', color: '#fff', font: 'inherit' }} />
+                    <button type="submit" className="btn-primary" disabled={reviewSubmitting} style={{ justifySelf: 'start', background: '#f97316' }}>{reviewSubmitting ? 'Sending review…' : 'Submit review'}</button>
+                    <small style={{ color: '#8892a4' }}>A store admin checks reviews before they appear publicly.</small>
+                  </form>
+                  : <p style={{ color: '#8892a4', fontSize: 13, margin: 0 }}>A verified purchase is required before you can review this item.</p>}
+            {reviewError && <p role="alert" style={{ color: '#fca5a5', fontSize: 12, margin: '10px 0 0' }}>{reviewError}</p>}
+          </div>
+          {reviewsLoading ? <p style={{ color: '#8892a4', fontSize: 13 }}>Loading reviews…</p>
+            : reviews.length ? <div style={{ display: 'grid', gap: 10 }}>{reviews.map(review => <article key={review._id || review.id} className="glass" style={{ borderRadius: 12, padding: 15 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}><strong style={{ color: '#fff', fontSize: 14 }}>{review.title}</strong><span aria-label={`${review.rating} out of 5 stars`} style={{ color: '#f6c90e', letterSpacing: 2 }}>{'★'.repeat(Number(review.rating) || 0)}{'☆'.repeat(5 - (Number(review.rating) || 0))}</span></div>
+              <p style={{ color: '#aeb8c8', fontSize: 13, lineHeight: 1.65, margin: '8px 0' }}>{review.body}</p>
+              <small style={{ color: '#758096' }}>Verified purchase · {review.customerName}{review.createdAt ? ` · ${new Date(review.createdAt).toLocaleDateString()}` : ''}</small>
+            </article>)}</div>
+              : <p style={{ color: '#8892a4', fontSize: 13 }}>No customer reviews yet.</p>}
+        </section>
 
         {/* Related Products */}
         {related.length > 0 && (

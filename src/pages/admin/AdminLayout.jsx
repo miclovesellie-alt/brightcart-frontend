@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   LayoutDashboard, Package, ShoppingBag, Users, BarChart2,
   Settings, LogOut, Menu, Truck, Search, Sparkles,
-  ChevronRight, Store, UserCheck, ShieldCheck, Shield, Eye,
+  ChevronRight, Store, UserCheck, ShieldCheck, Shield, Eye, Star,
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import CurrencySelector from '../../components/CurrencySelector';
@@ -16,6 +16,7 @@ const ALL_NAV = [
   { label: 'Dashboard',  icon: LayoutDashboard, page: 'admin-dashboard',  badge: null,  roles: ['super_admin','admin','moderator'] },
   { label: 'Orders',     icon: ShoppingBag,     page: 'admin-orders',     badge: null,  roles: ['super_admin','admin','moderator'] },
   { label: 'Products',   icon: Package,         page: 'admin-products',   badge: null,  roles: ['super_admin','admin'] },
+  { label: 'Reviews',    icon: Star,             page: 'admin-reviews',    badge: null,  roles: ['super_admin','admin','moderator'] },
   { label: 'AI Dropshipping', icon: Sparkles,    page: 'admin-dropshipping', badge: null, roles: ['super_admin','admin'] },
   { label: 'Suppliers',  icon: Truck,           page: 'admin-suppliers',  badge: null,  roles: ['super_admin'] },
   { label: 'Customers',  icon: Users,           page: 'admin-customers',  badge: null,  roles: ['super_admin','admin','moderator'] },

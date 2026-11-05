@@ -20,8 +20,9 @@ import AdminSettings from './pages/admin/AdminSettings';
 import AdminSuppliers from './pages/admin/AdminSuppliers';
 import AdminUsers from './pages/admin/AdminUsers';
 import AIDropshipping from './pages/admin/AIDropshipping';
+import AdminReviews from './pages/admin/AdminReviews';
 
-const ADMIN_PAGES = ['admin', 'admin-dashboard', 'admin-products', 'admin-orders', 'admin-customers', 'admin-analytics', 'admin-settings', 'admin-suppliers', 'admin-users', 'admin-dropshipping'];
+const ADMIN_PAGES = ['admin', 'admin-dashboard', 'admin-products', 'admin-orders', 'admin-customers', 'admin-analytics', 'admin-settings', 'admin-suppliers', 'admin-users', 'admin-dropshipping', 'admin-reviews'];
 
 const ADMIN_ROLES = ['super_admin', 'admin', 'moderator'];
 const PAGE_ROLES = {
@@ -31,6 +32,7 @@ const PAGE_ROLES = {
   'admin-suppliers': ['super_admin'],
   'admin-users': ['super_admin'],
   'admin-dropshipping': ['super_admin', 'admin'],
+  'admin-reviews': ['super_admin', 'admin', 'moderator'],
 };
 
 function AppContent() {
@@ -63,6 +65,7 @@ function AppContent() {
         case 'admin-suppliers': return <AdminSuppliers />;
         case 'admin-users': return <AdminUsers />;
         case 'admin-dropshipping': return <AIDropshipping />;
+        case 'admin-reviews': return <AdminReviews />;
         default: return <AdminDashboard />;
       }
     };

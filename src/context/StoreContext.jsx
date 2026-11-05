@@ -38,6 +38,12 @@ export function StoreProvider({ children }) {
   const [storeContacts, setStoreContacts] = useState(EMPTY_STORE_CONTACTS);
   const [adminProducts, setAdminProducts] = useState([]);
   const [cart, setCart] = useState([]);
+  const [wishlistIds, setWishlistIds] = useState(() => {
+    try {
+      const ids = JSON.parse(localStorage.getItem('shoppercart_wishlist_v1') || '[]');
+      return Array.isArray(ids) ? [...new Set(ids.map(String))] : [];
+    } catch { return []; }
+  });
   // The cached user is for immediate rendering; /auth/me validates the server session on load.
   const [user, setUserState] = useState(() => resolveSessionToken());
   const [orders, setOrders] = useState([]);
@@ -52,9 +58,33 @@ export function StoreProvider({ children }) {
   const pageRef = useRef(page);
   const pageParamsRef = useRef(pageParams);
   const pageHistoryRef = useRef(pageHistory);
+  const wishlistSyncSkipRef = useRef(false);
   pageRef.current = page;
   pageParamsRef.current = pageParams;
   pageHistoryRef.current = pageHistory;
+
+  useEffect(() => {
+    try { localStorage.setItem('shoppercart_wishlist_v1', JSON.stringify(wishlistIds)); } catch {}
+  }, [wishlistIds]);
+
+  useEffect(() => {
+    if (!user?.id || user.role !== 'customer') return;
+    wishlistSyncSkipRef.current = true;
+    const savedIds = Array.isArray(user.wishlistProductIds) ? [...new Set(user.wishlistProductIds.map(String))] : [];
+    setWishlistIds(savedIds);
+  }, [user?.id, user?.wishlistProductIds, user?.role]);
+
+  useEffect(() => {
+    if (!user?.id || user.role !== 'customer') return;
+    if (wishlistSyncSkipRef.current) {
+      wishlistSyncSkipRef.current = false;
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      api.updateAccountWishlist(wishlistIds.map(Number)).catch(error => console.warn('Saved items could not sync to the account:', error.message));
+    }, 350);
+    return () => window.clearTimeout(timeout);
+  }, [wishlistIds, user?.id, user?.role]);
 
   const refreshNotifications = useCallback(async () => {
     if (!user?.id) {
@@ -245,6 +275,16 @@ export function StoreProvider({ children }) {
     return `${product.id}:${variantKey || 'default'}`;
   };
 
+  const toggleWishlist = useCallback(productId => {
+    const id = String(productId);
+    setWishlistIds(previous => previous.includes(id) ? previous.filter(value => value !== id) : [...previous, id]);
+  }, []);
+
+  const removeFromWishlist = useCallback(productId => {
+    const id = String(productId);
+    setWishlistIds(previous => previous.filter(value => value !== id));
+  }, []);
+
   const addToCart = useCallback((product, qty = 1, variant = null) => {
     const cartKey = cartKeyFor(product, variant);
     const variantSnapshot = variant ? {
@@ -254,11 +294,15 @@ export function StoreProvider({ children }) {
       image: String(variant.image || variant.imageUrl || ''),
       images: Array.isArray(variant.images) ? variant.images : [],
       sku: String(variant.sku || ''),
+      price: variant.price != null && Number.isFinite(Number(variant.price)) ? Number(variant.price) : null,
+      originalPrice: variant.originalPrice != null && Number.isFinite(Number(variant.originalPrice)) ? Number(variant.originalPrice) : null,
     } : null;
     const cartProduct = variantSnapshot ? {
       ...product,
       image: variantSnapshot.image || product.image,
       images: variantSnapshot.images.length ? variantSnapshot.images : product.images,
+      price: variantSnapshot.price != null ? variantSnapshot.price : product.price,
+      originalPrice: variantSnapshot.originalPrice != null ? variantSnapshot.originalPrice : product.originalPrice,
     } : product;
     setCart(prev => {
       const existing = prev.find(item => (item.cartKey || cartKeyFor(item.product, item.variant)) === cartKey);
@@ -412,7 +456,9 @@ export function StoreProvider({ children }) {
   const refreshAdminProducts = useCallback(async () => {
     const [adminResult, publicResult] = await Promise.all([api.getAdminProducts(), api.getProducts()]);
     setAdminProducts(adminResult.data || []);
-    setProducts(publicResult.data || []);
+    const publicProducts = publicResult.data || [];
+    setProducts(publicProducts);
+    try { localStorage.setItem('shoppercart_public_products_v1', JSON.stringify({ savedAt: Date.now(), products: publicProducts })); } catch {}
     return adminResult.data || [];
   }, []);
 
@@ -456,6 +502,10 @@ export function StoreProvider({ children }) {
     <StoreContext.Provider value={{
       products,
       catalogLoading,
+      wishlistIds,
+      wishlistProducts: products.filter(product => wishlistIds.includes(String(product.id))),
+      toggleWishlist,
+      removeFromWishlist,
       storeContacts,
       updateStoreContacts,
       adminProducts,

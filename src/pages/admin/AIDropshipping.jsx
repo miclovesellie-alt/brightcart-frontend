@@ -37,7 +37,50 @@ const EMPTY_CANDIDATE = {
   productName: '', category: '', sourceUrl: '', supplierName: '', supplierUrl: '',
   imageUrl: '', images: '', unitCost: '', shippingCost: '', shippingStatus: 'unknown', retailPrice: '', currency: '', availableStock: '',
   shippingDays: '', shippingDestination: '', shippingCurrency: '', supplierCurrency: '', verifiedFacts: '', variants: '',
+  brand: '', supplierSku: '', barcode: '', mpn: '', availability: '', supplierRating: '', supplierReviewCount: '', specifications: '',
 };
+
+function variantText(variants) {
+  return JSON.stringify(Array.isArray(variants) ? variants : [], null, 2);
+}
+
+function parseVariantText(value) {
+  const text = String(value || '').trim();
+  if (!text) return [];
+  try {
+    const parsed = JSON.parse(text);
+    if (!Array.isArray(parsed)) throw new Error('Variant data must be a JSON array.');
+    return parsed.filter(item => item && typeof item === 'object').slice(0, 30);
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      if (text.startsWith('[') || text.startsWith('{')) throw new Error('Variant source data must be valid JSON.');
+      return text.split('\n').map(line => line.trim()).filter(Boolean).map(line => {
+        const [colorValue, imageValue] = line.split('|').map(value => value.trim());
+        return { name: colorValue, color: colorValue, image: imageValue || '', images: imageValue ? [imageValue] : [] };
+      });
+    }
+    throw error;
+  }
+}
+
+function convertVariantPrices(value, fromCurrency, toCurrency, convertBetween, roundMoneyInCurrency) {
+  try {
+    const variants = parseVariantText(value);
+    return variantText(variants.map(variant => variant.price == null || variant.price === '' ? variant : ({
+      ...variant,
+      price: roundMoneyInCurrency(convertBetween(Number(variant.price), fromCurrency, toCurrency), toCurrency),
+      currency: toCurrency,
+    })));
+  } catch { return value; }
+}
+
+function parseSpecificationText(value, source = 'supplier listing') {
+  return String(value || '').split('\n').map(line => line.trim()).filter(Boolean).slice(0, 60).map(line => {
+    const splitAt = line.indexOf(':');
+    if (splitAt < 1) return null;
+    return { label: line.slice(0, splitAt).trim(), value: line.slice(splitAt + 1).trim(), source };
+  }).filter(item => item?.label && item.value);
+}
 
 const cardStyle = { background: '#fff', border: '1px solid #e8edf3', borderRadius: 14 };
 const labelStyle = { display: 'block', fontSize: 10, fontWeight: 800, letterSpacing: '.08em', color: '#64748b', marginBottom: 6 };
@@ -263,6 +306,7 @@ export default function AIDropshipping() {
         unitCost: convertField(prev.unitCost),
         shippingCost: convertField(prev.shippingCost),
         retailPrice: convertField(prev.retailPrice),
+        variants: convertVariantPrices(prev.variants, previousCurrency, nextCurrency, convertBetween, roundMoneyInCurrency),
       };
     });
   }
@@ -287,7 +331,13 @@ export default function AIDropshipping() {
       const shippingInCurrent = fromSupplierCurrency(data.shippingCost, shippingCurrency, entryCurrency);
       const retailInCurrent = fromSupplierCurrency(data.suggestedRetailPrice, supplierCurrency, entryCurrency);
       const images = Array.isArray(data.images) ? data.images : [];
-      const variants = Array.isArray(data.variants) ? data.variants.map(item => `${item.color || item.name}${item.image ? ` | ${item.image}` : ''}`).join('\n') : '';
+      const variants = variantText((data.variants || []).map(variant => ({
+        ...variant,
+        supplierPrice: variant.supplierPrice ?? variant.price ?? null,
+        supplierCurrency: variant.supplierCurrency || variant.currency || supplierCurrency,
+        price: variant.price == null ? null : fromSupplierCurrency(variant.price, variant.currency || supplierCurrency, entryCurrency),
+        currency: entryCurrency,
+      })));
       setCandidateForm(prev => ({
         ...prev,
         productName: data.productName || prev.productName,
@@ -307,6 +357,14 @@ export default function AIDropshipping() {
         retailPrice: retailInCurrent,
         availableStock: data.availableStock == null ? '' : String(data.availableStock),
         shippingDays: data.shippingDays == null ? '' : String(data.shippingDays),
+        brand: data.brand || '',
+        supplierSku: data.supplierSku || '',
+        barcode: data.barcode || '',
+        mpn: data.mpn || '',
+        availability: data.availability || '',
+        supplierRating: data.supplierRating == null ? '' : String(data.supplierRating),
+        supplierReviewCount: data.supplierReviewCount == null ? '' : String(data.supplierReviewCount),
+        specifications: (data.specifications || []).map(item => `${item.label}: ${item.value}`).join('\n'),
         verifiedFacts: (data.verifiedFacts || []).join('\n'),
         variants,
       }));
@@ -321,6 +379,7 @@ export default function AIDropshipping() {
         suggestedRetailPrice: data.suggestedRetailPrice,
         shippingStatus: data.shippingStatus || 'unknown',
         missingSignals: data.missingSignals || [],
+        priceRange: data.priceRange || null,
         pricingPolicy: data.pricingPolicy,
         extractionMode: result.extractionMode,
         extractionWarning: result.extractionWarning,
@@ -347,10 +406,17 @@ export default function AIDropshipping() {
     try {
       const entryCurrency = candidateForm.currency || currency;
       const images = [...new Set(candidateForm.images.split('\n').map(value => value.trim()).filter(Boolean))];
-      const variants = candidateForm.variants.split('\n').map(value => value.trim()).filter(Boolean).map(line => {
-        const [colorValue, imageValue] = line.split('|').map(value => value.trim());
-        const color = colorValue || line;
-        return { name: color, color, image: imageValue || '', images: imageValue ? [imageValue] : [] };
+      const variants = parseVariantText(candidateForm.variants).map(variant => {
+        const entryPrice = variant.price ?? variant.unitCost;
+        return {
+          ...variant,
+          supplierPrice: variant.supplierPrice ?? entryPrice ?? null,
+          supplierCurrency: variant.supplierCurrency || candidateForm.supplierCurrency || entryCurrency,
+          unitCost: entryPrice == null || entryPrice === '' ? null : toUsdIn(entryPrice, entryCurrency),
+          retailPrice: null,
+          price: null,
+          currency: 'USD',
+        };
       });
       const result = await api.createResearch({
         productName: candidateForm.productName,
@@ -358,6 +424,15 @@ export default function AIDropshipping() {
         sourceUrl: candidateForm.sourceUrl,
         supplierName: candidateForm.supplierName,
         supplierUrl: candidateForm.supplierUrl,
+        brand: candidateForm.brand,
+        supplierSku: candidateForm.supplierSku,
+        barcode: candidateForm.barcode,
+        mpn: candidateForm.mpn,
+        availability: candidateForm.availability,
+        supplierRating: candidateForm.supplierRating === '' ? null : Number(candidateForm.supplierRating),
+        supplierReviewCount: candidateForm.supplierReviewCount === '' ? null : Number(candidateForm.supplierReviewCount),
+        specifications: parseSpecificationText(candidateForm.specifications),
+        priceRange: extractionSummary?.priceRange || null,
         imageUrl: candidateForm.imageUrl || images[0] || '',
         images,
         unitCost: candidateForm.unitCost === '' ? null : toUsdIn(candidateForm.unitCost, entryCurrency),
@@ -502,6 +577,8 @@ export default function AIDropshipping() {
       ...product,
       inputCurrency: entryCurrency,
       price: fromUsd(product.price || 0),
+      specificationsText: (product.specifications || []).map(item => `${item.label}: ${item.value}`).join('\n'),
+      variantsJson: variantText(product.variants),
       supplierDetails: {
         ...(product.supplierDetails || {}),
         unitCost: fromUsd(product.supplierDetails?.unitCost),
@@ -535,11 +612,14 @@ export default function AIDropshipping() {
   function draftPayload() {
     const supplierDetails = editingDraft?.supplierDetails || {};
     const entryCurrency = editingDraft?.inputCurrency || currency;
+    const { specificationsText, variantsJson, ...draft } = editingDraft || {};
     return {
-      ...editingDraft,
+      ...draft,
       inputCurrency: entryCurrency,
       price: toUsdIn(editingDraft.price, entryCurrency),
       stock: Number(editingDraft.stock),
+      specifications: parseSpecificationText(specificationsText, 'admin reviewed'),
+      variants: parseVariantText(variantsJson),
       supplierDetails: {
         ...supplierDetails,
         unitCost: supplierDetails.unitCost === '' || supplierDetails.unitCost == null ? null : toUsdIn(supplierDetails.unitCost, entryCurrency),
@@ -773,6 +853,10 @@ export default function AIDropshipping() {
                   <Field label="SUPPLIER NAME *" name="supplierName" value={candidateForm.supplierName} onChange={onCandidateField} required />
                   <Field label="SOURCE URL *" name="sourceUrl" value={candidateForm.sourceUrl} onChange={onCandidateField} type="url" placeholder="https://…" required />
                   <Field label="SUPPLIER PRODUCT URL" name="supplierUrl" value={candidateForm.supplierUrl} onChange={onCandidateField} type="url" placeholder="https://…" />
+                  <Field label="BRAND" name="brand" value={candidateForm.brand} onChange={onCandidateField} />
+                  <Field label="SUPPLIER SKU" name="supplierSku" value={candidateForm.supplierSku} onChange={onCandidateField} />
+                  <Field label="BARCODE / GTIN" name="barcode" value={candidateForm.barcode} onChange={onCandidateField} />
+                  <Field label="MANUFACTURER PART NUMBER" name="mpn" value={candidateForm.mpn} onChange={onCandidateField} />
                   <Field label="IMAGE URL" name="imageUrl" value={candidateForm.imageUrl} onChange={onCandidateField} type="url" placeholder="https://…" />
                   <label className="ds-field"><span style={labelStyle}>PRICE ENTRY CURRENCY</span><select value={candidateForm.currency || currency} onChange={event => changeCandidateCurrency(event.target.value)} style={inputStyle}>{candidateCurrencyOptions.map(item => <option key={item.code} value={item.code}>{item.flag} {item.code} · {item.name}</option>)}</select><small>Supplier currency is selected from the product page; changing it converts the entered amounts.</small></label>
                   <Field label={`SUPPLIER UNIT COST (${candidateForm.currency || currency})`} name="unitCost" value={candidateForm.unitCost} onChange={onCandidateField} type="number" min="0" step="0.01" placeholder="Unknown" />
@@ -781,8 +865,12 @@ export default function AIDropshipping() {
                   <Field label={`35% TARGET SELLING PRICE (${candidateForm.currency || currency})`} name="retailPrice" value={candidateForm.retailPrice} type="number" min="0.01" step="0.01" placeholder="Calculated from vendor cost" readOnly help="Calculated from vendor cost, confirmed shipping when available, and configured fees. Unknown shipping is excluded until verified." />
                   <Field label="AVAILABLE STOCK" name="availableStock" value={candidateForm.availableStock} onChange={onCandidateField} type="number" min="0" step="1" placeholder="Unknown" />
                   <Field label="SHIPPING TIME (DAYS)" name="shippingDays" value={candidateForm.shippingDays} onChange={onCandidateField} type="number" min="0" step="1" placeholder="Unknown" />
-                  <Field label="COLOR VARIANTS (COLOR | IMAGE URL)" name="variants" value={candidateForm.variants} onChange={onCandidateField} placeholder="Black | https://… (one per line)" />
+                  <Field label="SUPPLIER LISTING AVAILABILITY" name="availability" value={candidateForm.availability} onChange={onCandidateField} placeholder="In stock / Out of stock / Unknown" />
+                  <Field label="SUPPLIER RATING (REFERENCE ONLY)" name="supplierRating" value={candidateForm.supplierRating} onChange={onCandidateField} type="number" min="0" max="5" step="0.1" placeholder="Not provided" />
+                  <Field label="SUPPLIER REVIEW COUNT (REFERENCE ONLY)" name="supplierReviewCount" value={candidateForm.supplierReviewCount} onChange={onCandidateField} type="number" min="0" step="1" placeholder="Not provided" />
+                  <label className="ds-field ds-span-2"><span style={labelStyle}>VARIANTS (SOURCE DATA JSON)</span><textarea name="variants" value={candidateForm.variants} onChange={onCandidateField} rows="6" style={{ ...inputStyle, resize: 'vertical', fontFamily: 'monospace', fontSize: 11 }} placeholder={'[{"name":"Black / Large","color":"Black","size":"Large","sku":"…","price":12.5,"stock":20,"image":"https://…","attributes":{"color":"Black","size":"Large"}}]'} /><small>Options retain their color, size, SKU, price, inventory, and image. Legacy “Color | image URL” lines are also accepted.</small></label>
                   <label className="ds-field ds-span-2"><span style={labelStyle}>PRODUCT IMAGES (ONE URL PER LINE)</span><textarea name="images" value={candidateForm.images} onChange={onCandidateField} rows="3" style={{ ...inputStyle, resize: 'vertical' }} placeholder="https://supplier.com/image.jpg" /></label>
+                  <label className="ds-field ds-span-2"><span style={labelStyle}>SPECIFICATIONS (ONE LABEL: VALUE PER LINE)</span><textarea name="specifications" value={candidateForm.specifications} onChange={onCandidateField} rows="5" style={{ ...inputStyle, resize: 'vertical' }} placeholder={'Material: Aluminum\nWeight: 220 g\nDimensions: 15 × 8 × 2 cm'} /><small>These are source facts, separate from your store’s customer reviews.</small></label>
                   <label className="ds-field ds-span-2"><span style={labelStyle}>VERIFIED PRODUCT FACTS (ONE PER LINE)</span><textarea name="verifiedFacts" value={candidateForm.verifiedFacts} onChange={onCandidateField} rows="4" style={{ ...inputStyle, resize: 'vertical' }} placeholder="Only enter details confirmed by the source." /></label>
                 </div>
                 <div className="ds-form-foot"><span>All AI imported drafts use a fixed 35% contribution margin after configured fees. Unknown freight is excluded and flagged.</span><button style={buttonStyle} disabled={saving}><Plus size={15} /> Save for draft review</button></div>
@@ -803,6 +891,8 @@ export default function AIDropshipping() {
                       <div className="ds-research-main">
                         <div className="ds-research-title"><div><h4>{candidate.productName}</h4><small>{candidate.supplierName} · {categoryLabel(candidate.category)}</small></div><div className="ds-research-card-actions"><StatusPill tone={candidate.state === 'imported' ? 'green' : 'blue'}>{candidate.state || 'researched'}</StatusPill><button type="button" className="ds-icon-button ds-research-close" onClick={() => removeResearch(candidate)} disabled={saving} aria-label={`Remove ${candidate.productName} from research`} title="Remove from research"><X size={15} /></button></div></div>
                         <p className="ds-research-facts">{candidate.verifiedFacts?.slice(0, 2).join(' · ') || 'No verified product facts supplied.'}</p>
+                        <div className="ds-research-facts">Brand <b>{candidate.brand || 'Unknown'}</b> · SKU <b>{candidate.supplierSku || 'Unknown'}</b> · Specs <b>{candidate.specifications?.length || 0}</b> · Variants <b>{candidate.variants?.length || 0}</b> · Listing <b>{candidate.availability || 'Unknown'}</b>{candidate.supplierRating != null ? ` · Supplier rating ${candidate.supplierRating}/5 (${candidate.supplierReviewCount ?? 'no count'}; reference only)` : ''}</div>
+                        {candidate.missingSignals?.length > 0 && <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', margin: '7px 0' }}><span style={{ color: '#b45309', fontSize: 9, fontWeight: 800, alignSelf: 'center' }}>NEEDS CHECK</span>{candidate.missingSignals.map(signal => <span key={signal} style={{ border: '1px solid #fde68a', background: '#fffbeb', color: '#92400e', borderRadius: 99, padding: '3px 7px', fontSize: 9 }}>{signal}</span>)}</div>}
                         <div className="ds-research-data"><span>Vendor cost <b>{candidate.unitCost == null ? 'Unknown' : format(candidate.unitCost)}</b></span><span>35% selling price <b>{candidate.retailPrice == null ? 'Pending' : format(candidate.retailPrice)}</b></span><span>Stock <b>{candidate.availableStock ?? 'Unknown'}</b></span><span>Ship <b>{candidate.shippingStatus === 'free' ? 'Free' : candidate.shippingStatus === 'paid' ? format(candidate.shippingCost || 0) : 'Unknown'}</b></span></div>
                         <div className="ds-score-row"><div className="ds-score-track"><i style={{ width: `${candidate.score || 0}%` }} /></div><strong>{candidate.score || 0}<small>/100 operational fit</small></strong><a href={candidate.sourceUrl} target="_blank" rel="noreferrer">Source <ExternalLink size={12} /></a></div>
                         <div className="ds-research-actions">
@@ -875,6 +965,10 @@ export default function AIDropshipping() {
                     <div className="ds-modal-head"><div><h3>Review storefront draft</h3><p>Save edits first. Publishing runs backend completeness checks.</p></div><button className="ds-icon-button" onClick={() => setEditingDraft(null)} aria-label="Close"><X size={17} /></button></div>
                     <div className="ds-form-grid">
                       <Field label="TITLE" value={editingDraft.name || ''} onChange={event => setEditingDraft(prev => ({ ...prev, name: event.target.value }))} />
+                      <Field label="BRAND" value={editingDraft.brand || ''} onChange={event => setEditingDraft(prev => ({ ...prev, brand: event.target.value }))} />
+                      <Field label="SUPPLIER SKU" value={editingDraft.sku || ''} onChange={event => setEditingDraft(prev => ({ ...prev, sku: event.target.value, supplierDetails: { ...(prev.supplierDetails || {}), vendorSku: event.target.value } }))} />
+                      <Field label="BARCODE / GTIN" value={editingDraft.barcode || editingDraft.supplierDetails?.barcode || ''} onChange={event => setEditingDraft(prev => ({ ...prev, barcode: event.target.value, supplierDetails: { ...(prev.supplierDetails || {}), barcode: event.target.value } }))} />
+                      <Field label="MANUFACTURER PART NUMBER" value={editingDraft.mpn || editingDraft.supplierDetails?.mpn || ''} onChange={event => setEditingDraft(prev => ({ ...prev, mpn: event.target.value, supplierDetails: { ...(prev.supplierDetails || {}), mpn: event.target.value } }))} />
                       <label className="ds-field"><span style={labelStyle}>PRICE ENTRY CURRENCY</span><select value={editingDraft.inputCurrency || currency} onChange={event => changeDraftCurrency(event.target.value)} style={inputStyle}>{draftCurrencyOptions.map(item => <option key={item.code} value={item.code}>{item.flag} {item.code} · {item.name}</option>)}</select><small>Changing this converts the displayed prices while keeping their USD catalog values unchanged.</small></label>
                       <Field label={`RETAIL PRICE (${editingDraft.inputCurrency || currency})`} type="number" min="0.01" step="0.01" value={editingDraft.price || ''} onChange={event => setEditingDraft(prev => ({ ...prev, price: event.target.value }))} />
                       <Field label="STOCK" type="number" min="0" step="1" value={editingDraft.stock ?? ''} onChange={event => setEditingDraft(prev => ({ ...prev, stock: event.target.value }))} />
@@ -884,6 +978,14 @@ export default function AIDropshipping() {
                       <Field label="SHIPPING DESTINATION" value={editingDraft.supplierDetails?.shippingDestination || ''} onChange={event => setEditingDraft(prev => ({ ...prev, supplierDetails: { ...(prev.supplierDetails || {}), shippingDestination: event.target.value } }))} placeholder="Country or ISO code" />
                       <Field label="IMAGE URL" value={editingDraft.image || ''} onChange={event => setEditingDraft(prev => ({ ...prev, image: event.target.value }))} />
                       <label className="ds-field ds-span-2"><span style={labelStyle}>DESCRIPTION</span><textarea rows="5" style={{ ...inputStyle, resize: 'vertical' }} value={editingDraft.description || ''} onChange={event => setEditingDraft(prev => ({ ...prev, description: event.target.value }))} /></label>
+                      <label className="ds-field ds-span-2"><span style={labelStyle}>TECHNICAL SPECIFICATIONS (ONE LABEL: VALUE PER LINE)</span><textarea rows="5" style={{ ...inputStyle, resize: 'vertical' }} value={editingDraft.specificationsText || ''} onChange={event => setEditingDraft(prev => ({ ...prev, specificationsText: event.target.value }))} placeholder="Material: Aluminum" /></label>
+                      <label className="ds-field ds-span-2"><span style={labelStyle}>VARIANTS (SOURCE DATA JSON)</span><textarea rows="7" style={{ ...inputStyle, resize: 'vertical', fontFamily: 'monospace', fontSize: 11 }} value={editingDraft.variantsJson || '[]'} onChange={event => setEditingDraft(prev => ({ ...prev, variantsJson: event.target.value }))} /><small>Preserves per-option color, size, images, stock, SKU, and price. Use a JSON array.</small></label>
+                      <div className="ds-field ds-span-2"><span style={labelStyle}>SOURCE DATA SUMMARY</span><div style={{ border: '1px solid #e8edf3', borderRadius: 9, padding: 10, color: '#64748b', fontSize: 11, lineHeight: 1.6, overflowWrap: 'anywhere' }}>
+                        <div><b>Availability from supplier:</b> {editingDraft.availability || editingDraft.supplierDetails?.sourceAvailability || 'Not supplied'}</div>
+                        {editingDraft.supplierDetails?.sourceRating != null && <div><b>Supplier listing rating:</b> {editingDraft.supplierDetails.sourceRating}{editingDraft.supplierDetails.sourceReviewCount != null ? ` (${editingDraft.supplierDetails.sourceReviewCount} supplier reviews; reference only)` : ' (reference only)'}</div>}
+                        <div><b>Source URL:</b> {editingDraft.supplierDetails?.sourceUrl || 'Not recorded'}</div>
+                        {!!(editingDraft.verifiedFacts || []).length && <div style={{ marginTop: 5 }}><b>Verified source facts:</b> {(editingDraft.verifiedFacts || []).join(' · ')}</div>}
+                      </div></div>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '12px 0 4px' }}><button type="button" style={secondaryStyle} onClick={recalculateDraftPrice}>Recalculate retail price from confirmed costs</button></div>
                     <div className="ds-review-checks">
@@ -940,6 +1042,23 @@ export default function AIDropshipping() {
           {section === 'connections' && (
             <section className="ds-stack">
               <div className="ds-section-head"><div><h2>Connections &amp; safeguards</h2><p>Secrets stay on the server. This page reports setup state without asking for private keys.</p></div></div>
+              <section className="ds-panel" style={cardStyle}>
+                <div className="ds-panel-head"><div><h3>Supplier product sources</h3><p>Try public-page import across suppliers. Supplier APIs require the supplier’s own approval and credentials.</p></div></div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 230px), 1fr))', gap: 10 }}>
+                  {(connections?.supplierSources || []).map(source => <article key={source.name} style={{ border: '1px solid #e8edf3', borderRadius: 10, padding: 12, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}><strong style={{ color: '#0f172a', fontSize: 12 }}>{source.name}</strong><StatusPill tone={source.connected ? 'green' : 'amber'}>{source.status}</StatusPill></div>
+                    <div style={{ color: '#64748b', fontSize: 10, marginTop: 5 }}>{source.mode}</div>
+                    <p style={{ color: '#64748b', fontSize: 10, lineHeight: 1.55, margin: '7px 0 0' }}>{source.note}</p>
+                  </article>)}
+                </div>
+                <div className="ds-form-hint" style={{ marginTop: 10 }}>Import never treats a guessed price or shipping fee as confirmed. Check every source fact before approving a draft.</div>
+              </section>
+              <section className="ds-panel" style={cardStyle}>
+                <div className="ds-panel-head"><div><h3>Sales channels</h3><p>Connect your store products to third-party marketplaces after the seller app is authorized.</p></div><StatusPill tone="amber">Setup required</StatusPill></div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: 10 }}>
+                  {(connections?.salesChannels || []).map(channel => <article key={channel.name} style={{ border: '1px solid #e8edf3', borderRadius: 10, padding: 12 }}><div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}><strong style={{ color: '#0f172a', fontSize: 12 }}>{channel.name}</strong><StatusPill tone="amber">{channel.status}</StatusPill></div><p style={{ color: '#64748b', fontSize: 10, lineHeight: 1.55, margin: '7px 0 0' }}>{channel.note}</p></article>)}
+                </div>
+              </section>
               <div className="ds-connection-grid">
                 <article className="ds-connection-card" style={cardStyle}>
                   <div className="ds-connection-icon ds-icon-purple"><Sparkles size={19} /></div><div className="ds-connection-title"><div><h3>AI provider fallback</h3><p>{connections?.ai?.provider || 'Gemini → Groq → Ollama'}</p></div><StatusPill tone={connections?.ai?.available ? 'green' : 'amber'}>{connections?.ai?.available ? 'Configured' : 'Not configured'}</StatusPill></div>
@@ -972,11 +1091,17 @@ export default function AIDropshipping() {
           <section className="ds-modal ds-preview-modal" role="dialog" aria-modal="true" aria-label="Product preview" onClick={event => event.stopPropagation()}>
             <div className="ds-modal-head"><div><h3>Shopper preview</h3><p>{selectedCandidate.state === 'imported' ? 'A private product draft is ready in Product Studio.' : 'This remains a private draft until you publish it.'}</p></div><button className="ds-icon-button" onClick={() => setSelectedCandidate(null)} aria-label="Close"><X size={17} /></button></div>
             <div className="ds-shopper-preview">
-              <ProductImageGallery className="ds-shopper-preview-image" product={{ image: selectedCandidate.imageUrl }} alt={selectedCandidate.productName} showControls={false} />
+              <ProductImageGallery className="ds-shopper-preview-image" product={{ image: selectedCandidate.imageUrl, images: selectedCandidate.images }} alt={selectedCandidate.productName} showControls={false} />
               <div><StatusPill tone="amber">Preview only</StatusPill><h2>{selectedCandidate.content?.title || selectedCandidate.productName}</h2><p>{selectedCandidate.content?.description || selectedCandidate.verifiedFacts?.join(' ') || 'Add verified product details before publication.'}</p><strong>{format(selectedCandidate.retailPrice || 0)}</strong></div>
             </div>
             {selectedCandidate.content?.bullets?.length > 0 && <ul className="ds-preview-list">{selectedCandidate.content.bullets.map((bullet, index) => <li key={index}>{bullet}</li>)}</ul>}
-            <div className="ds-preview-source"><ExternalLink size={13} /><a href={selectedCandidate.sourceUrl} target="_blank" rel="noreferrer">Review source facts</a><span>·</span><span>{selectedCandidate.availableStock || 0} supplied stock</span></div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(145px, 1fr))', gap: 8, margin: '12px 0' }}>
+              {[["Brand", selectedCandidate.brand], ["Supplier SKU", selectedCandidate.supplierSku], ["Barcode", selectedCandidate.barcode], ["MPN", selectedCandidate.mpn], ["Availability", selectedCandidate.availability], ["Stock", selectedCandidate.availableStock ?? 'Unknown'], ["Shipping to", selectedCandidate.shippingDestination], ["Shipping status", selectedCandidate.shippingStatus === 'free' ? 'Free confirmed' : selectedCandidate.shippingStatus === 'paid' ? 'Paid confirmed' : 'Unknown']].map(([label, value]) => <div key={label} style={{ background: '#f8fafc', borderRadius: 8, padding: 8 }}><small style={{ display: 'block', color: '#64748b', fontSize: 9 }}>{label}</small><strong style={{ display: 'block', color: '#0f172a', fontSize: 10, overflowWrap: 'anywhere' }}>{value || 'Not provided'}</strong></div>)}
+            </div>
+            {!!selectedCandidate.specifications?.length && <div style={{ margin: '12px 0', border: '1px solid #e8edf3', borderRadius: 9, padding: 10 }}><strong style={{ color: '#334155', fontSize: 11 }}>Extracted specifications</strong><div style={{ display: 'grid', gap: 4, marginTop: 7 }}>{selectedCandidate.specifications.map(spec => <div key={`${spec.label}:${spec.value}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, color: '#64748b', fontSize: 10 }}><span>{spec.label}</span><b style={{ textAlign: 'right', color: '#334155' }}>{spec.value}</b></div>)}</div></div>}
+            {!!selectedCandidate.variants?.length && <div style={{ margin: '12px 0', border: '1px solid #e8edf3', borderRadius: 9, padding: 10 }}><strong style={{ color: '#334155', fontSize: 11 }}>Supplier options ({selectedCandidate.variants.length})</strong><div style={{ display: 'grid', gap: 5, marginTop: 7 }}>{selectedCandidate.variants.map((variant, index) => <div key={variant.id || `${variant.name}-${index}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, color: '#64748b', fontSize: 10 }}><span>{variant.name || [variant.color, variant.size].filter(Boolean).join(' / ') || 'Option'}{variant.sku ? ` · SKU ${variant.sku}` : ''}</span><b style={{ color: '#334155', textAlign: 'right' }}>{variant.price != null ? `${variant.price} ${variant.currency || selectedCandidate.supplierCurrency || ''}` : 'Price unknown'}{variant.stock != null ? ` · ${variant.stock} stock` : ''}</b></div>)}</div></div>}
+            {selectedCandidate.missingSignals?.length > 0 && <div className="ds-blocked-note"><AlertTriangle size={14} />Still needs review: {selectedCandidate.missingSignals.join(', ')}.</div>}
+            <div className="ds-preview-source"><ExternalLink size={13} /><a href={selectedCandidate.sourceUrl} target="_blank" rel="noreferrer">Review source page</a><span>·</span><span>Supplier stock {selectedCandidate.availableStock ?? 'unknown'}</span><span>·</span><span>Supplier listing rating is reference only: {selectedCandidate.supplierRating ?? 'not supplied'}</span></div>
             <div className="ds-modal-actions"><button style={secondaryStyle} onClick={() => generateContent(selectedCandidate)} disabled={saving || !connections?.ai?.available}><Sparkles size={14} /> Generate copy with configured AI</button>{selectedCandidate.state === 'imported' ? <button style={buttonStyle} onClick={() => { setSelectedCandidate(null); setSection('studio'); }}><Package size={14} /> Review in Product Studio</button> : <button style={buttonStyle} onClick={() => importCandidate(selectedCandidate)} disabled={saving}><Package size={14} /> Import hidden draft</button>}</div>
           </section>
         </div>

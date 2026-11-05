@@ -51,11 +51,15 @@ export const api = {
   async markAllNotificationsRead() { return request('/notifications/read-all', { method: 'POST', body: body({}) }); },
 
   async getProducts() { return request('/products', { auth: false }); },
+  async getProductReviews(productId) { return request(`/products/${encodeURIComponent(productId)}/reviews`, { auth: false }); },
+  async createProductReview(productId, review) { return request(`/products/${encodeURIComponent(productId)}/reviews`, { method: 'POST', body: body(review) }); },
   async getStoreSettings() { return request('/store-settings', { auth: false }); },
   async getAdminStoreSettings() { return request('/admin/store-settings'); },
   async updateAdminStoreSettings(settings) { return request('/admin/store-settings', { method: 'PATCH', body: body(settings) }); },
   async sendAdminTestEmail() { return request('/admin/store-settings/test-email', { method: 'POST', body: body({}) }); },
   async getAdminProducts() { return request('/admin/products'); },
+  async getAdminReviews(status = 'all') { return request(`/admin/reviews?status=${encodeURIComponent(status)}`); },
+  async moderateReview(id, status) { return request(`/admin/reviews/${encodeURIComponent(id)}`, { method: 'PATCH', body: body({ status }) }); },
   async addProduct(product) { return request('/admin/products', { method: 'POST', body: body(product) }); },
   async updateProduct(product, options = {}) {
     const payload = options.notifyDraftSaved ? { ...product, notifyDraftSaved: true } : product;
@@ -66,6 +70,8 @@ export const api = {
   async getAdminOrders() { return request('/admin/orders'); },
   async getOrders() { return request('/admin/orders'); },
   async getAccountOrders() { return request('/account/orders'); },
+  async getAccountReviews(productId) { return request(`/account/reviews${productId ? `?productId=${encodeURIComponent(productId)}` : ''}`); },
+  async updateAccountWishlist(productIds) { return request('/account/wishlist', { method: 'PUT', body: body({ productIds }) }); },
   async placeOrder(order) { return request('/orders', { method: 'POST', body: body(order) }); },
   async initializePaystackPayment(order) { return request('/payments/paystack/initialize', { method: 'POST', body: body(order) }); },
   async verifyCheckoutPayment(reference) { return request('/payments/paystack/verify', { method: 'POST', auth: false, body: body({ reference }) }); },

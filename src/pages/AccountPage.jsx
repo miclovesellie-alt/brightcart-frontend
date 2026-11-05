@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { User, Mail, Lock, LogOut, Package, ShieldAlert, Phone, Globe } from 'lucide-react';
+import { User, Mail, Lock, LogOut, Package, ShieldAlert, Phone, Globe, Heart, X } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useCurrency } from '../context/CurrencyContext';
 import AirpodsAnimation from '../components/AirpodsAnimation';
@@ -20,7 +20,7 @@ const inputStyle = {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function AccountPage() {
-  const { user, orders = [], login, register, logout, navigate } = useStore();
+  const { user, orders = [], login, register, logout, navigate, wishlistIds = [], wishlistProducts = [], removeFromWishlist } = useStore();
   const { format } = useCurrency();
   const [tab, setTab] = useState('login');
   const [form, setForm] = useState({ name: '', email: '', password: '', phone: '', country: '' });
@@ -114,6 +114,22 @@ export default function AccountPage() {
               <LogOut size={15} /> Logout
             </button>
           </div>
+
+          <section className="glass" style={{ borderRadius: '16px', padding: '24px', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}><Heart size={20} color="#fb7185" /><h3 style={{ fontWeight: 700, fontSize: 18, color: '#fff' }}>Saved items</h3><span style={{ color: '#8892a4', fontSize: 12 }}>({wishlistIds.length})</span></div>
+            {!wishlistIds.length ? <p style={{ color: '#8892a4', fontSize: 13 }}>Tap the heart on a product to keep it here for later.</p>
+              : !wishlistProducts.length ? <p style={{ color: '#8892a4', fontSize: 13 }}>Saved items are loading or are no longer available.</p>
+                : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 205px), 1fr))', gap: 12 }}>
+                  {wishlistProducts.map(product => <article key={product.id} style={{ minWidth: 0, border: '1px solid rgba(255,255,255,.08)', borderRadius: 11, overflow: 'hidden', background: 'rgba(255,255,255,.025)' }}>
+                    <button onClick={() => navigate('product-detail', { productId: product.id })} style={{ display: 'block', width: '100%', border: 0, padding: 0, background: 'transparent', cursor: 'pointer', textAlign: 'left' }}>
+                      <ProductImageGallery product={product} alt={product.name} showControls={false} style={{ width: '100%', height: 135, background: '#111118' }} imageStyle={{ padding: 8 }} />
+                      <span style={{ display: 'block', color: '#fff', fontSize: 12, fontWeight: 700, padding: '10px 11px 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.name}</span>
+                      <span style={{ display: 'block', color: '#fb923c', fontWeight: 800, fontSize: 13, padding: '0 11px 11px' }}>{format(product.price)}</span>
+                    </button>
+                    <button onClick={() => removeFromWishlist(product.id)} style={{ display: 'flex', alignItems: 'center', gap: 5, margin: '0 10px 10px auto', border: '1px solid rgba(255,255,255,.1)', borderRadius: 7, padding: '5px 8px', background: 'transparent', color: '#aeb8c8', fontSize: 10, cursor: 'pointer' }}><X size={12} /> Remove</button>
+                  </article>)}
+                </div>}
+          </section>
 
           {/* Orders */}
           <div className="glass" style={{ borderRadius: '16px', padding: '24px' }}>
