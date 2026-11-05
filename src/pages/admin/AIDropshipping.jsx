@@ -662,6 +662,7 @@ export default function AIDropshipping() {
       }
       setEditingDraft(null);
       setDraftChecks({ policyReviewed: false, inventoryVerified: false, contentReviewed: false });
+      await refreshAdminProducts().catch(() => {});
       await loadOverviewOnly();
       await refreshNotifications().catch(() => {});
     } catch (err) {
@@ -723,6 +724,7 @@ export default function AIDropshipping() {
   }
 
   const draftProducts = adminProducts.filter(product => product.status === 'Draft');
+  const allReviewChecksComplete = draftChecks.inventoryVerified && draftChecks.policyReviewed && draftChecks.contentReviewed;
   const visibleResearch = research.filter(candidate => {
     const query = researchSearch.trim().toLowerCase();
     const matchesText = !query || `${candidate.productName || ''} ${candidate.supplierName || ''} ${candidate.category || ''}`.toLowerCase().includes(query);
@@ -993,6 +995,19 @@ export default function AIDropshipping() {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '12px 0 4px' }}><button type="button" style={secondaryStyle} onClick={recalculateDraftPrice}>Recalculate retail price from confirmed costs</button></div>
                     <div className="ds-review-checks">
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                        <strong style={{ color: '#334155', fontSize: 11 }}>Review confirmations</strong>
+                        <button
+                          type="button"
+                          style={{ ...secondaryStyle, padding: '6px 9px', fontSize: 10 }}
+                          onClick={() => {
+                            const checked = !allReviewChecksComplete;
+                            setDraftChecks({ inventoryVerified: checked, policyReviewed: checked, contentReviewed: checked });
+                          }}
+                          disabled={saving}
+                          aria-pressed={allReviewChecksComplete}
+                        >{allReviewChecksComplete ? 'Uncheck all' : 'Check all'}</button>
+                      </div>
                       <label><input type="checkbox" checked={draftChecks.inventoryVerified} onChange={event => setDraftChecks(prev => ({ ...prev, inventoryVerified: event.target.checked }))} /> I confirmed stock against the supplier source.</label>
                       <label><input type="checkbox" checked={draftChecks.policyReviewed} onChange={event => setDraftChecks(prev => ({ ...prev, policyReviewed: event.target.checked }))} /> I reviewed product claims and policy risks.</label>
                       <label><input type="checkbox" checked={draftChecks.contentReviewed} onChange={event => setDraftChecks(prev => ({ ...prev, contentReviewed: event.target.checked }))} /> I reviewed the final title, image, price, and description.</label>
