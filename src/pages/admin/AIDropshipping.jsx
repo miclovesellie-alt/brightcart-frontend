@@ -656,6 +656,10 @@ export default function AIDropshipping() {
       await updateProduct(draftPayload());
       const published = await publishProductDraft(editingDraft.id, draftChecks);
       setNotice(`${published.name} is live in the storefront catalog.`);
+      if (editingDraft.researchId) {
+        const publishedResearchId = String(editingDraft.researchId);
+        setResearch(prev => prev.filter(candidate => String(candidate._id) !== publishedResearchId));
+      }
       setEditingDraft(null);
       setDraftChecks({ policyReviewed: false, inventoryVerified: false, contentReviewed: false });
       await loadOverviewOnly();
