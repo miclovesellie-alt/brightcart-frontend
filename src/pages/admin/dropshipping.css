@@ -219,8 +219,8 @@
   .ds-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ds-workflow-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ds-layout { grid-template-columns: 1fr; }
-  .ds-nav { flex-direction: row; overflow-x: auto; position: static; }
-  .ds-nav > button { flex: 0 0 auto; width: auto; }
+  .ds-nav { flex-direction: row; flex-wrap: wrap; overflow: visible; position: static; }
+  .ds-nav > button { flex: 1 1 140px; width: auto; min-width: 0; white-space: normal; }
   .ds-nav-note { display: none; }
 }
 

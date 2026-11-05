@@ -213,8 +213,8 @@ export default function AdminUsers() {
           <select aria-label="Filter team by status" value={teamStatusFilter} onChange={event => setTeamStatusFilter(event.target.value)} style={{ minWidth: 0, padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', color: '#374151', fontSize: 12 }}><option value="all">All statuses</option><option value="Active">Active</option><option value="Disabled">Disabled</option></select>
           <select aria-label="Sort team members" value={teamSort} onChange={event => setTeamSort(event.target.value)} style={{ minWidth: 0, padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', color: '#374151', fontSize: 12 }}><option value="name">Name A–Z</option><option value="role">Role</option></select>
         </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+        <div className="admin-mobile-table-wrap" style={{ overflowX: 'auto' }}>
+          <table className="admin-mobile-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ background: '#f8fafc' }}>
                 {['Member', 'Role', 'Status', 'Created', 'Last Login', 'Actions'].map(h => (
@@ -233,7 +233,7 @@ export default function AdminUsers() {
                       background: isMe ? 'rgba(37,99,235,0.04)' : 'transparent',
                     }}
                   >
-                    <td style={{ padding: '12px 16px' }}>
+                    <td data-label="Member" style={{ padding: '12px 16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <Avatar name={admin.name} role={admin.role} />
                         <div>
@@ -247,8 +247,8 @@ export default function AdminUsers() {
                         </div>
                       </div>
                     </td>
-                    <td style={{ padding: '12px 16px' }}><RoleBadge role={admin.role} /></td>
-                    <td style={{ padding: '12px 16px' }}>
+                    <td data-label="Role" style={{ padding: '12px 16px' }}><RoleBadge role={admin.role} /></td>
+                    <td data-label="Status" style={{ padding: '12px 16px' }}>
                       <span style={{
                         fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20,
                         background: admin.status === 'Active' ? '#dcfce7' : '#fee2e2',
@@ -257,17 +257,17 @@ export default function AdminUsers() {
                         {admin.status}
                       </span>
                     </td>
-                    <td style={{ padding: '12px 16px', color: '#64748b', whiteSpace: 'nowrap' }}>
+                    <td data-label="Created" style={{ padding: '12px 16px', color: '#64748b', whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                         <Calendar size={11} /> {admin.createdAt}
                       </div>
                     </td>
-                    <td style={{ padding: '12px 16px', color: '#64748b', whiteSpace: 'nowrap' }}>
+                    <td data-label="Last Login" style={{ padding: '12px 16px', color: '#64748b', whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                         <Clock size={11} /> {admin.lastLogin}
                       </div>
                     </td>
-                    <td style={{ padding: '12px 16px' }}>
+                    <td data-label="Actions" style={{ padding: '12px 16px' }}>
                       {!isMe && admin.role !== 'super_admin' ? (
                         <div style={{ position: 'relative' }}>
                           <button
@@ -322,8 +322,8 @@ export default function AdminUsers() {
           <ShieldCheck size={16} color="#7c3aed" />
           <span style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>Role Permissions</span>
         </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+        <div className="admin-mobile-table-wrap" style={{ overflowX: 'auto' }}>
+          <table className="admin-mobile-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ background: '#f8fafc' }}>
                 <th style={{ padding: '10px 20px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', letterSpacing: '0.05em' }}>FEATURE</th>
@@ -337,9 +337,9 @@ export default function AdminUsers() {
             <tbody>
               {PERMISSIONS.map((row, i) => (
                 <tr key={row.label} style={{ borderTop: '1px solid #f1f5f9', background: i % 2 === 0 ? 'transparent' : '#fafbfc' }}>
-                  <td style={{ padding: '10px 20px', fontWeight: 500, color: '#374151' }}>{row.label}</td>
+                  <td data-label="Feature" style={{ padding: '10px 20px', fontWeight: 500, color: '#374151' }}>{row.label}</td>
                   {['super_admin', 'admin', 'moderator'].map(r => (
-                    <td key={r} style={{ padding: '10px 20px', textAlign: 'center' }}>
+                    <td key={r} data-label={r === 'super_admin' ? 'Super Admin' : r === 'admin' ? 'Admin' : 'Moderator'} style={{ padding: '10px 20px', textAlign: 'center' }}>
                       {row[r]
                         ? <div style={{ display: 'inline-flex', width: 22, height: 22, borderRadius: '50%', background: '#dcfce7', alignItems: 'center', justifyContent: 'center' }}><Check size={13} color="#16a34a" /></div>
                         : <div style={{ display: 'inline-flex', width: 22, height: 22, borderRadius: '50%', background: '#fee2e2', alignItems: 'center', justifyContent: 'center' }}><X size={13} color="#dc2626" /></div>

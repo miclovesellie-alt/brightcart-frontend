@@ -182,10 +182,10 @@ export default function AdminDashboard() {
             <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>Products sold</div>
             <button onClick={() => navigate('admin-products')} style={{ fontSize: 11, color: '#c2410c', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}>Manage products <ArrowRight size={12} /></button>
           </div>
-          {data.topProducts.length ? <div style={{ overflowX: 'auto' }}><table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse', minWidth: 360 }}>
+          {data.topProducts.length ? <div className="admin-mobile-table-wrap" style={{ overflowX: 'auto' }}><table className="admin-mobile-table" style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse', minWidth: 360 }}>
             <thead><tr style={{ background: '#f8fafc' }}>{['Product', 'Units', 'Paid product value'].map(header => <th key={header} style={{ padding: '9px 14px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#64748b' }}>{header}</th>)}</tr></thead>
             <tbody>{data.topProducts.map(product => <tr key={product.name} style={{ borderTop: '1px solid #f8fafc' }}>
-              <td style={{ padding: '10px 14px', fontWeight: 600, color: '#0f172a' }}>{product.name}</td><td style={{ padding: '10px 14px', color: '#374151' }}>{product.units}</td><td style={{ padding: '10px 14px', fontWeight: 700, color: '#2563eb' }}>{format(product.revenue)}</td>
+              <td data-label="Product" style={{ padding: '10px 14px', fontWeight: 600, color: '#0f172a' }}>{product.name}</td><td data-label="Units" style={{ padding: '10px 14px', color: '#374151' }}>{product.units}</td><td data-label="Paid product value" style={{ padding: '10px 14px', fontWeight: 700, color: '#2563eb' }}>{format(product.revenue)}</td>
             </tr>)}</tbody>
           </table></div> : <div style={{ padding: 28, textAlign: 'center', color: '#94a3b8', fontSize: 12 }}>Paid product sales will appear here after payments are verified.</div>}
         </section>

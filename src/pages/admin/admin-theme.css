@@ -1,7 +1,12 @@
 .admin-layout {
   color: #e5e7eb;
   background: #0a0a0f !important;
+  box-sizing: border-box;
 }
+
+.admin-layout *,
+.admin-layout *::before,
+.admin-layout *::after { box-sizing: border-box; }
 
 .admin-layout .admin-topbar {
   background: rgba(10, 10, 15, .96) !important;
@@ -186,8 +191,50 @@
 .admin-layout .ds-page .ds-nav-note { color: #cbd5e1; }
 .admin-layout .admin-topbar-hamburger svg { color: #cbd5e1 !important; }
 
+.admin-layout .admin-product-edit-modal {
+  background: #15151c !important;
+  border: 1px solid rgba(255,255,255,.12);
+  color: #e5e7eb;
+}
+
+.admin-layout .admin-product-edit-modal h3 { color: #f8fafc !important; }
+.admin-layout .admin-product-edit-modal label { color: #cbd5e1 !important; }
+.admin-layout .admin-product-edit-modal p,
+.admin-layout .admin-product-edit-modal small { color: #aab4c5 !important; }
+
 @media (max-width: 768px) {
-  .admin-layout .admin-page-content {
-    padding: 14px !important;
-  }
+  .admin-layout { max-width: 100vw; overflow-x: hidden; }
+  .admin-layout .admin-topbar-heading { flex: 1; min-width: 0; }
+  .admin-layout .admin-topbar-heading > div:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .admin-layout .admin-page-content { min-width: 0; padding: 12px !important; overflow-x: hidden !important; }
+  .admin-layout .admin-page-content > * { max-width: 100%; min-width: 0; }
+  .admin-layout .admin-page-content :is(section, article, form, aside) { max-width: 100%; min-width: 0; }
+  .admin-layout .admin-page-content :is(input, select, textarea) { box-sizing: border-box; max-width: 100%; min-width: 0 !important; }
+  .admin-layout .admin-page-content :is(p, h1, h2, h3, h4, td, th, label, a, span, code) { overflow-wrap: anywhere; }
+
+  .admin-layout .admin-page-content [style*="grid-template-columns: 1fr 1fr"],
+  .admin-layout .admin-page-content [style*="minmax(260px"] { grid-template-columns: minmax(0, 1fr) !important; }
+  .admin-layout .admin-mobile-table-wrap { max-width: 100%; overflow: visible !important; }
+  .admin-layout table.admin-mobile-table { display: block; width: 100% !important; min-width: 0 !important; table-layout: fixed; }
+  .admin-layout table.admin-mobile-table thead { display: none; }
+  .admin-layout table.admin-mobile-table tbody { display: grid; gap: 10px; }
+  .admin-layout table.admin-mobile-table tbody tr { display: block; min-width: 0; padding: 7px 12px; border: 1px solid rgba(255,255,255,.1) !important; border-radius: 12px; background: #111118 !important; }
+  .admin-layout table.admin-mobile-table tbody td { display: grid; grid-template-columns: minmax(90px, 36%) minmax(0, 1fr); align-items: start; gap: 8px; width: 100%; min-width: 0; padding: 8px 0 !important; border-top: 1px solid rgba(255,255,255,.07); text-align: left !important; white-space: normal !important; overflow-wrap: anywhere; }
+  .admin-layout table.admin-mobile-table tbody td:first-child { border-top: 0; }
+  .admin-layout table.admin-mobile-table tbody td::before { content: attr(data-label); color: #94a3b8; font-size: 10px; font-weight: 700; letter-spacing: .04em; line-height: 1.4; text-transform: uppercase; }
+  .admin-layout table.admin-mobile-table tbody td[colspan] { display: block; padding: 14px 4px !important; }
+  .admin-layout table.admin-mobile-table tbody td[colspan]::before { content: none; }
+  .admin-layout table.admin-mobile-table tbody td > * { min-width: 0; max-width: 100%; }
+  .admin-layout table.admin-mobile-table td[data-label="Items"] > div:first-child { flex-wrap: wrap; justify-content: flex-end; }
+  .admin-layout table.admin-mobile-table td[data-label="Action"] > div,
+  .admin-layout table.admin-mobile-table td[data-label="Actions"] > div { flex-wrap: wrap; justify-content: flex-end; }
+}
+
+@media (max-width: 540px) {
+  .admin-layout .admin-page-content { padding: 10px !important; }
+  .admin-layout .admin-product-edit-modal { max-height: calc(100dvh - 20px) !important; padding: 16px !important; }
+  .admin-layout .admin-product-form-grid,
+  .admin-layout .admin-product-metrics { grid-template-columns: minmax(0, 1fr) !important; }
+  .admin-layout table.admin-mobile-table tbody td { grid-template-columns: minmax(82px, 34%) minmax(0, 1fr); gap: 7px; }
+  .admin-layout .admin-page-content [style*="max-width: 1050px"] { width: 100%; }
 }

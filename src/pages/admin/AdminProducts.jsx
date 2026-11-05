@@ -257,8 +257,8 @@ export default function AdminProducts() {
       </div>
 
       <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e8edf3', overflow: 'hidden' }}>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse', minWidth: 780 }}>
+        <div className="admin-mobile-table-wrap" style={{ overflowX: 'auto' }}>
+          <table className="admin-mobile-table" style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse', minWidth: 780 }}>
             <thead><tr style={{ background: '#f8fafc' }}>
               {['Product', 'Category', 'Price', 'Landed cost', 'Profit / unit', 'Margin', 'Stock', 'Supplier', 'Status', 'Actions'].map(heading => (
                 <th key={heading} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: '#64748b', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{heading.toUpperCase()}</th>
@@ -272,19 +272,19 @@ export default function AdminProducts() {
                 const statusColor = statusColors[product.status] || '#64748b';
                 return (
                   <tr key={product.id} style={{ borderTop: '1px solid #f8fafc' }}>
-                    <td style={{ padding: '10px 14px' }}><div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                    <td data-label="Product" style={{ padding: '10px 14px' }}><div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                       <ProductImageGallery product={product} alt={product.name} showControls={false} style={{ width: 36, height: 36, flex: '0 0 36px', borderRadius: 8, background: '#f1f5f9' }} imageStyle={{ padding: 3 }} />
                       <div><div style={{ fontWeight: 600, color: '#0f172a', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.name}</div><div style={{ fontSize: 10, color: '#94a3b8' }}>SKU: {product.sku || String(product.id).slice(0, 8)}</div></div>
                     </div></td>
-                    <td style={{ padding: '10px 14px', color: '#64748b', whiteSpace: 'nowrap' }}>{categoryLabel(product.category)}</td>
-                    <td style={{ padding: '10px 14px', fontWeight: 700, color: '#2563eb' }}>{format(product.price)}</td>
-                    <td style={{ padding: '10px 14px', color: '#64748b' }}>{hasRecordedCost(product) ? format(unitCost(product) + shippingCost(product)) : '—'}</td>
-                    <td style={{ padding: '10px 14px', color: profit !== null && profit >= 0 ? '#16a34a' : '#dc2626', fontWeight: 700 }}>{profit === null ? '—' : format(profit)}</td>
-                    <td style={{ padding: '10px 14px' }}>{productMargin !== null ? <span style={{ background: productMargin > 30 ? '#f0fdf4' : productMargin > 15 ? '#fffbeb' : '#fef2f2', color: productMargin > 30 ? '#16a34a' : productMargin > 15 ? '#d97706' : '#ef4444', borderRadius: 6, padding: '2px 7px', fontWeight: 700, fontSize: 10 }}>{productMargin}%</span> : '—'}</td>
-                    <td style={{ padding: '10px 14px', fontWeight: 600, color: (product.stock || 0) < 5 ? '#ef4444' : '#374151' }}>{product.stock ?? 0}{(product.stock || 0) < 5 && product.stock !== undefined && <span style={{ marginLeft: 4, fontSize: 9, color: '#ef4444' }}>LOW</span>}</td>
-                    <td style={{ padding: '10px 14px', color: '#64748b' }}>{product.supplier || 'Not assigned'}</td>
-                    <td style={{ padding: '10px 14px' }}><span style={{ background: `${statusColor}18`, color: statusColor, borderRadius: 20, padding: '2px 9px', fontWeight: 700, fontSize: 10 }}>{product.status || 'Active'}</span></td>
-                    <td style={{ padding: '10px 14px' }}><div style={{ display: 'flex', gap: 6 }}>
+                    <td data-label="Category" style={{ padding: '10px 14px', color: '#64748b', whiteSpace: 'nowrap' }}>{categoryLabel(product.category)}</td>
+                    <td data-label="Price" style={{ padding: '10px 14px', fontWeight: 700, color: '#2563eb' }}>{format(product.price)}</td>
+                    <td data-label="Landed cost" style={{ padding: '10px 14px', color: '#64748b' }}>{hasRecordedCost(product) ? format(unitCost(product) + shippingCost(product)) : '—'}</td>
+                    <td data-label="Profit / unit" style={{ padding: '10px 14px', color: profit !== null && profit >= 0 ? '#16a34a' : '#dc2626', fontWeight: 700 }}>{profit === null ? '—' : format(profit)}</td>
+                    <td data-label="Margin" style={{ padding: '10px 14px' }}>{productMargin !== null ? <span style={{ background: productMargin > 30 ? '#f0fdf4' : productMargin > 15 ? '#fffbeb' : '#fef2f2', color: productMargin > 30 ? '#16a34a' : productMargin > 15 ? '#d97706' : '#ef4444', borderRadius: 6, padding: '2px 7px', fontWeight: 700, fontSize: 10 }}>{productMargin}%</span> : '—'}</td>
+                    <td data-label="Stock" style={{ padding: '10px 14px', fontWeight: 600, color: (product.stock || 0) < 5 ? '#ef4444' : '#374151' }}>{product.stock ?? 0}{(product.stock || 0) < 5 && product.stock !== undefined && <span style={{ marginLeft: 4, fontSize: 9, color: '#ef4444' }}>LOW</span>}</td>
+                    <td data-label="Supplier" style={{ padding: '10px 14px', color: '#64748b' }}>{product.supplier || 'Not assigned'}</td>
+                    <td data-label="Status" style={{ padding: '10px 14px' }}><span style={{ background: `${statusColor}18`, color: statusColor, borderRadius: 20, padding: '2px 9px', fontWeight: 700, fontSize: 10 }}>{product.status || 'Active'}</span></td>
+                    <td data-label="Actions" style={{ padding: '10px 14px' }}><div style={{ display: 'flex', gap: 6 }}>
                       <button aria-label={`Edit ${product.name}`} onClick={() => openEdit(product)} style={{ padding: '5px 9px', borderRadius: 6, background: '#fff7ed', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Edit2 size={12} color="#c2410c" /></button>
                       <button aria-label={`Delete ${product.name}`} onClick={() => setDeleteId(product.id)} style={{ padding: '5px 9px', borderRadius: 6, background: '#fef2f2', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Trash2 size={12} color="#ef4444" /></button>
                     </div></td>
@@ -299,13 +299,13 @@ export default function AdminProducts() {
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} onClick={closeModal} />
-          <div style={{ position: 'relative', background: '#fff', borderRadius: 16, width: '100%', maxWidth: 620, maxHeight: '90vh', overflowY: 'auto', padding: 24, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+          <div className="admin-product-edit-modal" style={{ position: 'relative', background: '#fff', borderRadius: 16, width: '100%', maxWidth: 620, maxHeight: '90vh', overflowY: 'auto', padding: 24, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <div><h3 style={{ fontWeight: 800, fontSize: 16, color: '#0f172a', margin: 0 }}>{editProduct ? 'Edit Product' : 'Add New Product'}</h3><p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 12 }}>Add accurate pricing, stock, and product photos.</p></div>
               <button aria-label="Close" onClick={closeModal} style={{ background: '#f1f5f9', border: 'none', borderRadius: 8, padding: 7, cursor: 'pointer', display: 'flex' }}><X size={16} color="#64748b" /></button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 14 }}>
+            <div className="admin-product-form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 14 }}>
               <div style={{ gridColumn: '1/-1' }}><label style={lbl}>PRODUCT NAME *</label><input autoFocus value={form.name} onChange={event => F('name', event.target.value)} placeholder="e.g. Wireless noise-cancelling headphones" style={inp} /></div>
               <div style={{ gridColumn: '1/-1' }}><label style={lbl}>PRICE ENTRY CURRENCY</label><select value={form.currency} onChange={event => changeInputCurrency(event.target.value)} style={inp}>{CURRENCIES.map(item => <option key={item.code} value={item.code}>{item.flag} {item.code} · {item.name}</option>)}</select><small style={hint}>Entered prices convert to USD for the catalog, then to each shopper’s preferred currency. Changing this choice converts the amounts already entered.</small></div>
               <div><label style={lbl}>CATEGORY *</label><input list="shoppercart-product-categories" value={form.category.replace(/[-_]+/g, ' ')} onChange={event => F('category', event.target.value)} placeholder="Choose or add a category" style={inp} /><datalist id="shoppercart-product-categories">{categories.map(item => <option key={item.slug} value={item.label} />)}</datalist><small style={hint}>Choose a suggestion or type a new category. Save the product to add it to the category list.</small></div>
@@ -333,7 +333,7 @@ export default function AdminProducts() {
 
               <div style={{ gridColumn: '1/-1', background: previewReady && previewProfit < 0 ? '#fff7ed' : '#f0fdf4', borderRadius: 9, padding: '12px 14px' }}>
                 <div style={{ fontSize: 10, color: '#64748b', fontWeight: 700, letterSpacing: '.04em', marginBottom: 8 }}>ESTIMATED UNIT ECONOMICS</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+                <div className="admin-product-metrics" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
                   <Metric label="Landed unit cost" value={form.cost !== '' ? formatInputMoney(previewLandedCost) : '—'} />
                   <Metric label="Profit per unit" value={previewReady ? formatInputMoney(previewProfit) : '—'} color={previewProfit >= 0 ? '#16a34a' : '#dc2626'} />
                   <Metric label="Gross margin" value={previewReady ? `${(previewProfit / previewPrice * 100).toFixed(1)}%` : '—'} color={previewProfit >= 0 ? '#16a34a' : '#dc2626'} />
