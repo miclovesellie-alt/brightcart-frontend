@@ -46,6 +46,10 @@ export const api = {
   },
   async getMe() { return request('/auth/me'); },
 
+  async getNotifications(limit = 30) { return request(`/notifications?limit=${encodeURIComponent(limit)}`); },
+  async markNotificationRead(id) { return request(`/notifications/${encodeURIComponent(id)}/read`, { method: 'PATCH', body: body({}) }); },
+  async markAllNotificationsRead() { return request('/notifications/read-all', { method: 'POST', body: body({}) }); },
+
   async getProducts() { return request('/products', { auth: false }); },
   async getStoreSettings() { return request('/store-settings', { auth: false }); },
   async getAdminStoreSettings() { return request('/admin/store-settings'); },
@@ -53,7 +57,10 @@ export const api = {
   async sendAdminTestEmail() { return request('/admin/store-settings/test-email', { method: 'POST', body: body({}) }); },
   async getAdminProducts() { return request('/admin/products'); },
   async addProduct(product) { return request('/admin/products', { method: 'POST', body: body(product) }); },
-  async updateProduct(product) { return request(`/admin/products/${encodeURIComponent(product.id)}`, { method: 'PATCH', body: body(product) }); },
+  async updateProduct(product, options = {}) {
+    const payload = options.notifyDraftSaved ? { ...product, notifyDraftSaved: true } : product;
+    return request(`/admin/products/${encodeURIComponent(product.id)}`, { method: 'PATCH', body: body(payload) });
+  },
   async deleteProduct(id) { return request(`/admin/products/${encodeURIComponent(id)}`, { method: 'DELETE' }); },
 
   async getAdminOrders() { return request('/admin/orders'); },

@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import {
   LayoutDashboard, Package, ShoppingBag, Users, BarChart2,
-  Settings, LogOut, Menu, Truck, Bell, Search, Sparkles,
+  Settings, LogOut, Menu, Truck, Search, Sparkles,
   ChevronRight, Store, UserCheck, ShieldCheck, Shield, Eye,
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import CurrencySelector from '../../components/CurrencySelector';
 import PageBackButton from '../../components/PageBackButton';
 import BrandLogo from '../../components/BrandLogo';
+import NotificationBell from '../../components/NotificationBell';
 import { isSampleProduct } from '../../utils/catalog';
 import './admin-theme.css';
 
@@ -32,7 +33,6 @@ const ROLE_BADGE = {
 export default function AdminLayout({ children, activePage }) {
   const { navigate, logout, user, orders = [], adminProducts = [] } = useStore();
   const [open, setOpen] = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
 
@@ -42,7 +42,7 @@ export default function AdminLayout({ children, activePage }) {
   const awaitingPayment = orders.filter(order => order.paymentStatus === 'pending_verification').length;
   const awaitingFulfillment = orders.filter(order => ['pending', 'processing'].includes(String(order.status || '').toLowerCase())).length;
   const lowStock = adminProducts.filter(product => !isSampleProduct(product) && product.status !== 'Draft' && Number(product.stock ?? 0) < 5).length;
-  const notifications = [
+  const storeAlerts = [
     ...(awaitingPayment ? [{ text: `${awaitingPayment} order${awaitingPayment === 1 ? '' : 's'} need payment verification`, dot: '#f59e0b', page: 'admin-orders', params: { queue: 'payment' } }] : []),
     ...(awaitingFulfillment ? [{ text: `${awaitingFulfillment} order${awaitingFulfillment === 1 ? '' : 's'} awaiting fulfillment`, dot: '#3b82f6', page: 'admin-orders', params: { queue: 'process' } }] : []),
     ...(lowStock ? [{ text: `${lowStock} product${lowStock === 1 ? '' : 's'} below 5 units of stock`, dot: '#ef4444', page: 'admin-products', params: { stock: 'low' } }] : []),
@@ -184,29 +184,7 @@ export default function AdminLayout({ children, activePage }) {
           <div className="admin-topbar-actions" style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:12, flexShrink:0 }}>
             {/* Currency Selector */}
             <div className="admin-topbar-currency"><CurrencySelector theme="dark" /></div>
-            {/* Notifications */}
-            <div style={{ position:'relative' }}>
-              <button
-                onClick={() => setNotifOpen(v => !v)}
-                style={{ position:'relative', padding:7, borderRadius:8, background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.08)', cursor:'pointer', display:'flex' }}
-              >
-                <Bell size={17} color="#94a3b8" />
-                {notifications.length > 0 && <span style={{ position:'absolute', top:4, right:4, width:7, height:7, borderRadius:'50%', background:'#f97316', border:'2px solid #0a0a0f' }} />}
-              </button>
-              {notifOpen && (
-                <div className="admin-notification-popover" style={{ position:'absolute', right:0, top:44, width:300, background:'#111118', borderRadius:12, border:'1px solid rgba(255,255,255,.1)', boxShadow:'0 8px 30px rgba(0,0,0,0.5)', zIndex:50, overflow:'hidden' }}>
-                  <div style={{ padding:'12px 16px', borderBottom:'1px solid rgba(255,255,255,.08)' }}><span style={{ fontWeight:700, fontSize:13, color:'#f8fafc' }}>Store alerts</span></div>
-                  {notifications.length ? notifications.map((n, i) => (
-                      <button key={i} type="button" onClick={() => { navigate(n.page, n.params); setNotifOpen(false); }} style={{ width:'100%', padding:'10px 16px', border:0, borderBottom:'1px solid rgba(255,255,255,.06)', background:'transparent', display:'flex', gap:10, alignItems:'flex-start', textAlign:'left', cursor:'pointer' }}>
-                      <div style={{ width:7, height:7, borderRadius:'50%', background:n.dot, marginTop:5, flexShrink:0 }} />
-                      <div>
-                        <div style={{ fontSize:12, color:'#cbd5e1', lineHeight:1.4 }}>{n.text}</div>
-                      </div>
-                    </button>
-                  )) : <div style={{ padding:'14px 16px', fontSize:12, color:'#64748b' }}>No payment, fulfillment, or stock alerts.</div>}
-                </div>
-              )}
-            </div>
+            <NotificationBell className="admin" extraNotifications={storeAlerts} />
 
             {/* Avatar */}
             <div className="admin-topbar-user" style={{ display:'flex', alignItems:'center', gap:8 }}>

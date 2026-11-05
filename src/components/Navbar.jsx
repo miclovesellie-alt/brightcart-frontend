@@ -3,6 +3,7 @@ import { useStore } from '../context/StoreContext';
 import BrandLogo from './BrandLogo';
 import { ShoppingCart, User, Menu, X, ChevronDown } from 'lucide-react';
 import CurrencySelector from './CurrencySelector';
+import NotificationBell from './NotificationBell';
 
 const NAV_LINKS = [
   { label: 'Home', page: 'home' },
@@ -12,7 +13,7 @@ const NAV_LINKS = [
 ];
 
 export default function Navbar() {
-  const { navigate, cartCount, page } = useStore();
+  const { navigate, cartCount, page, user } = useStore();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -189,6 +190,7 @@ export default function Navbar() {
         <div className="storefront-navbar__actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
           {/* Currency Selector */}
           <div className="storefront-navbar__currency"><CurrencySelector theme="dark" /></div>
+          {user && <NotificationBell className="storefront" />}
           {/* Cart */}
           <button
             className="storefront-navbar__cart"

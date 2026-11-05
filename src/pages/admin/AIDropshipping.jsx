@@ -101,8 +101,11 @@ function StatusPill({ children, tone = 'slate' }) {
 
 export default function AIDropshipping() {
   const { currency, rates, format, convertBetween, CURRENCIES } = useCurrency();
-  const { adminProducts, orders, user, refreshAdminProducts, refreshAdminOrders, updateProduct } = useStore();
-  const [section, setSection] = useState('overview');
+  const { adminProducts, orders, user, pageParams, refreshAdminProducts, refreshAdminOrders, refreshNotifications, updateProduct, publishProductDraft } = useStore();
+  const [section, setSection] = useState(() => pageParams?.section === 'studio' ? 'studio' : 'overview');
+  useEffect(() => {
+    if (pageParams?.section === 'studio') setSection('studio');
+  }, [pageParams?.section, pageParams?.notificationId]);
   const [days, setDays] = useState(30);
   const [overview, setOverview] = useState(null);
   const [connections, setConnections] = useState(null);
@@ -319,12 +322,16 @@ export default function AIDropshipping() {
         shippingStatus: data.shippingStatus || 'unknown',
         missingSignals: data.missingSignals || [],
         pricingPolicy: data.pricingPolicy,
+        extractionMode: result.extractionMode,
+        extractionWarning: result.extractionWarning,
         source: result.source,
       });
       const missing = data.missingSignals?.length ? ` Needs review: ${data.missingSignals.join(', ')}.` : '';
       const conversionWarning = data.unitCost != null && !priceInCurrent ? ` The source price is ${data.unitCost} ${supplierCurrency || '(currency not stated)'}; choose a supported entry currency and enter a verified price.` : '';
       const shippingWarning = data.shippingCost != null && !shippingInCurrent ? ` The supplier shipping fee is ${data.shippingCost} ${shippingCurrency || '(currency not stated)'}; enter a verified fee in the selected currency.` : '';
-      setResearchMessage(`Product facts extracted from the source. Check the title, images, variants, and all amounts before saving.${missing}${conversionWarning}${shippingWarning}`);
+      const extractionMethod = result.extractionMode === 'CJ official product API' ? 'Product details loaded from the CJ product API.' : 'Product facts extracted from public page metadata.';
+      const extractionWarning = result.extractionWarning ? ` ${result.extractionWarning}` : '';
+      setResearchMessage(`${extractionMethod} Check the title, images, variants, and all amounts before saving.${extractionWarning}${missing}${conversionWarning}${shippingWarning}`);
     } catch (err) {
       setResearchMessage(err.message || 'Could not extract this supplier page. You can still enter verified facts manually.');
     } finally {
@@ -382,6 +389,7 @@ export default function AIDropshipping() {
         const imported = await api.importResearch(savedCandidate._id);
         savedCandidate = { ...savedCandidate, state: 'imported', productId: imported.data.id };
         importMessage = ' A hidden catalog draft was also created in Product Studio.';
+        await refreshNotifications().catch(() => {});
         try { await refreshAdminProducts(); }
         catch { importMessage += ' Refresh Product Studio if it does not appear immediately.'; }
       } catch (importError) {
@@ -445,10 +453,11 @@ export default function AIDropshipping() {
     setDuplicate(null);
     try {
       const result = await api.importResearch(candidate._id, updateExisting);
-      setNotice(`${result.data.name} is now saved as a draft in Admin > Products. It is hidden from the storefront until reviewed and published.`);
+      setNotice(`${result.data.name} is now saved as a draft in Product Studio. It is hidden from the storefront until reviewed and published.`);
       setResearch(prev => prev.map(item => String(item._id) === String(candidate._id) ? { ...item, state: 'imported', productId: result.data.id } : item));
       setSelectedCandidate(null);
       await refreshAdminProducts();
+      await refreshNotifications().catch(() => {});
       await loadOverviewOnly();
     } catch (err) {
       if (err.status === 409 && err.details?.duplicate) setDuplicate({ candidate, product: err.details.duplicate });
@@ -547,8 +556,9 @@ export default function AIDropshipping() {
     setSaving(true);
     setError('');
     try {
-      await updateProduct(draftPayload());
+      await updateProduct(draftPayload(), { notifyDraftSaved: true });
       setNotice('Draft saved in the shared product catalog.');
+      await refreshNotifications().catch(() => {});
       setEditingDraft(null);
       setDraftChecks({ policyReviewed: false, inventoryVerified: false, contentReviewed: false });
     } catch (err) {
@@ -564,12 +574,12 @@ export default function AIDropshipping() {
     setError('');
     try {
       await updateProduct(draftPayload());
-      const result = await api.publishDraft(editingDraft.id, draftChecks);
-      setNotice(`${result.data.name} is live in the storefront catalog.`);
+      const published = await publishProductDraft(editingDraft.id, draftChecks);
+      setNotice(`${published.name} is live in the storefront catalog.`);
       setEditingDraft(null);
       setDraftChecks({ policyReviewed: false, inventoryVerified: false, contentReviewed: false });
-      await refreshAdminProducts();
       await loadOverviewOnly();
+      await refreshNotifications().catch(() => {});
     } catch (err) {
       setError(err.message || 'Publishing was blocked. Check required product, stock, and review fields.');
     } finally {
@@ -696,7 +706,7 @@ export default function AIDropshipping() {
             const Icon = item.icon;
             return <button key={item.id} className={section === item.id ? 'active' : ''} onClick={() => setSection(item.id)}><Icon size={16} /><span>{item.label}</span>{section === item.id && <ChevronRight size={14} />}</button>;
           })}
-          <div className="ds-nav-note"><ShieldCheck size={16} /><span>Publishing requires review. Supplier execution stays manual until an official adapter is connected.</span></div>
+          <div className="ds-nav-note"><ShieldCheck size={16} /><span>Publishing requires review. Stock checks and supplier orders remain manual.</span></div>
         </nav>
 
         <main className="ds-content">
@@ -747,13 +757,13 @@ export default function AIDropshipping() {
               <div className="ds-section-head"><div><h2>Product research</h2><p>Import a supplier product page, verify its facts and pricing, then save it for admin review.</p></div></div>
               <div className="ds-callout"><AlertTriangle size={17} /><div><strong>Source and uncertainty</strong><span>AI imports target a fixed 35% contribution margin after configured payment and platform fees. Confirmed shipping is included; when freight is unknown, the draft price is based on vendor unit cost only and must be recalculated after shipping is verified.</span></div></div>
               <section className="ds-panel ds-form-panel" style={cardStyle}>
-                <div className="ds-panel-head"><div><h3>Import from supplier URL</h3><p>Enter a product page to extract its listed facts, images, vendor price, and structured color options.</p></div><StatusPill tone="blue">Source review required</StatusPill></div>
+                <div className="ds-panel-head"><div><h3>Import from supplier URL</h3><p>Enter a product page to extract its listed facts, images, vendor price, and structured color options. CJ product links use the official API when configured.</p></div><StatusPill tone="blue">Source review required</StatusPill></div>
                 <div className="ds-form-grid">
                   <Field label="SUPPLIER PRODUCT URL *" value={extractUrl} onChange={event => setExtractUrl(event.target.value)} type="url" placeholder="https://supplier.com/product/…" />
                   <Field label="SHIPPING DESTINATION (COUNTRY OR ISO CODE)" value={destinationCountry} onChange={event => setDestinationCountry(event.target.value)} placeholder="e.g. GH" help="The importer only accepts a shipping rate explicitly marked for this destination." />
                 </div>
-                <div className="ds-form-foot"><span>Extraction reads public HTML and product metadata only. Pages that require sign-in or JavaScript may need manual entry.</span><button type="button" style={buttonStyle} disabled={extracting || saving} onClick={extractSupplierProduct}><Search size={15} /> {extracting ? "Reading supplier page…" : "Extract product details"}</button></div>
-                {extractionSummary && <div className="ds-ai-note"><Sparkles size={13} />{extractionSummary.unitCost != null ? `Vendor cost: ${extractionSummary.unitCost} ${extractionSummary.currency || "(currency not stated)"}. ` : ""}{extractionSummary.suggestedRetailPrice != null ? `Suggested selling price: ${extractionSummary.suggestedRetailPrice} ${extractionSummary.currency} at a 35% contribution margin${extractionSummary.shippingStatus === 'unknown' ? ', excluding unconfirmed shipping' : ''}.` : "A selling price needs a verified vendor cost."}{extractionSummary.pricingPolicy?.feesConfigured === false ? " Payment/platform fees currently default to 0; configure them before publishing." : ""}</div>}
+                <div className="ds-form-foot"><span>Public pages are read with metadata fallbacks. Add CJ_API_KEY in the backend environment for CJ links. Sign-in or bot-protected pages may need manual entry.</span><button type="button" style={buttonStyle} disabled={extracting || saving} onClick={extractSupplierProduct}><Search size={15} /> {extracting ? "Reading supplier page…" : "Extract product details"}</button></div>
+                {extractionSummary && <div className="ds-ai-note"><Sparkles size={13} />{extractionSummary.extractionMode ? `${extractionSummary.extractionMode}. ` : ''}{extractionSummary.unitCost != null ? `Vendor cost: ${extractionSummary.unitCost} ${extractionSummary.currency || "(currency not stated)"}. ` : ""}{extractionSummary.suggestedRetailPrice != null ? `Suggested selling price: ${extractionSummary.suggestedRetailPrice} ${extractionSummary.currency} at a 35% contribution margin${extractionSummary.shippingStatus === 'unknown' ? ', excluding unconfirmed shipping' : ''}.` : "A selling price needs a verified vendor cost."}{extractionSummary.extractionWarning ? ` ${extractionSummary.extractionWarning}` : ''}{extractionSummary.pricingPolicy?.feesConfigured === false ? " Payment/platform fees currently default to 0; configure them before publishing." : ""}</div>}
               </section>
               <form className="ds-panel ds-form-panel" style={cardStyle} onSubmit={submitCandidate}>
                 <div className="ds-panel-head"><div><h3>Review extracted facts</h3><p>Confirm missing values before saving. Amounts are stored in the catalog’s USD base currency.</p></div><StatusPill tone="blue">Draft only</StatusPill></div>
@@ -937,9 +947,9 @@ export default function AIDropshipping() {
                   <div className="ds-setup-box"><strong>Optional backend setup</strong><code>GEMINI_API_KEY · GROQ_API_KEY · OLLAMA_MODEL</code><span>{connections?.ai?.setup || 'AI output must be checked against verified facts.'}</span></div>
                 </article>
                 <article className="ds-connection-card" style={cardStyle}>
-                  <div className="ds-connection-icon ds-icon-blue"><Truck size={19} /></div><div className="ds-connection-title"><div><h3>Supplier API</h3><p>Official adapters only</p></div><StatusPill tone="amber">Not connected</StatusPill></div>
-                  <p className="ds-connection-copy">No supplier provider or credentials are present in these repositories. Stock sync and automatic orders remain off. Manual research and purchase records are available.</p>
-                  <div className="ds-setup-box"><strong>Before enabling orders</strong><span>Choose a supplier with an official API, confirm permitted use, implement its adapter, and store credentials as backend environment variables.</span></div>
+                  <div className="ds-connection-icon ds-icon-blue"><Truck size={19} /></div><div className="ds-connection-title"><div><h3>CJ product lookup</h3><p>{connections?.supplier?.mode || 'Public product-page extraction'}</p></div><StatusPill tone={connections?.supplier?.configured ? 'green' : 'amber'}>{connections?.supplier?.configured ? 'Configured' : 'Page fallback'}</StatusPill></div>
+                  <p className="ds-connection-copy">The CJ API reads product descriptions, current vendor prices, images, and variants even when its web page is JavaScript-rendered. Shipping-to-destination confirmation, live inventory verification, and supplier ordering still require review.</p>
+                  <div className="ds-setup-box"><strong>Backend setup</strong><code>CJ_API_KEY</code><span>{connections?.supplier?.setup || 'Keep the CJ API key only in the backend environment. Public-page extraction remains available when it is not configured.'}</span></div>
                 </article>
                 <article className="ds-connection-card" style={cardStyle}>
                   <div className="ds-connection-icon ds-icon-green"><ShieldCheck size={19} /></div><div className="ds-connection-title"><div><h3>Database &amp; authentication</h3><p>Admin API access is role-gated</p></div><StatusPill tone={connections?.database?.includes('connected') ? 'green' : 'amber'}>{connections?.database?.includes('connected') ? 'Connected' : 'Memory mode'}</StatusPill></div>

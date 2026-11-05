@@ -41,6 +41,7 @@ export function StoreProvider({ children }) {
   // The cached user is for immediate rendering; /auth/me validates the server session on load.
   const [user, setUserState] = useState(() => resolveSessionToken());
   const [orders, setOrders] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [adminUsers, setAdminUsers] = useState([]);
   const [page, setPage] = useState(() => sessionGet('brightcart_page', 'home'));
   const [pageParams, setPageParams] = useState(() => sessionGet('brightcart_page_params', {}));
@@ -54,6 +55,29 @@ export function StoreProvider({ children }) {
   pageRef.current = page;
   pageParamsRef.current = pageParams;
   pageHistoryRef.current = pageHistory;
+
+  const refreshNotifications = useCallback(async () => {
+    if (!user?.id) {
+      setNotifications([]);
+      return [];
+    }
+    const result = await api.getNotifications();
+    const loaded = Array.isArray(result.data) ? result.data : [];
+    setNotifications(loaded);
+    return loaded;
+  }, [user?.id, user?.role]);
+
+  const markNotificationRead = useCallback(async id => {
+    const result = await api.markNotificationRead(id);
+    setNotifications(previous => previous.map(item => item.id === id ? result.data : item));
+    return result.data;
+  }, []);
+
+  const markAllNotificationsRead = useCallback(async () => {
+    await api.markAllNotificationsRead();
+    const readAt = new Date().toISOString();
+    setNotifications(previous => previous.map(item => item.readAt ? item : { ...item, readAt }));
+  }, []);
 
   // The public catalog never includes draft products.
   useEffect(() => {
@@ -91,6 +115,27 @@ export function StoreProvider({ children }) {
     });
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setNotifications([]);
+      return undefined;
+    }
+    let active = true;
+    const loadNotifications = () => {
+      api.getNotifications().then(result => {
+        if (active) setNotifications(Array.isArray(result.data) ? result.data : []);
+      }).catch(() => {});
+    };
+    loadNotifications();
+    const refreshTimer = window.setInterval(loadNotifications, 30_000);
+    window.addEventListener('focus', loadNotifications);
+    return () => {
+      active = false;
+      window.clearInterval(refreshTimer);
+      window.removeEventListener('focus', loadNotifications);
+    };
+  }, [user?.id, user?.role]);
 
   // Load only the signed-in user's orders. Admin pages use a separate protected endpoint.
   useEffect(() => {
@@ -259,9 +304,10 @@ export function StoreProvider({ children }) {
     });
     const newOrder = result.data;
     setOrders(prev => [newOrder, ...prev.filter(order => order.id !== newOrder.id)]);
+    await refreshNotifications().catch(() => {});
     setCart([]);
     return newOrder;
-  }, [cart, user]);
+  }, [cart, user, refreshNotifications]);
 
   const completePaystackCheckout = useCallback(async reference => {
     const result = await api.verifyCheckoutPayment(reference);
@@ -320,6 +366,7 @@ export function StoreProvider({ children }) {
     pageParamsRef.current = {};
     setUserState(null);
     setOrders([]);
+    setNotifications([]);
     setAdminProducts([]);
     setAdminUsers([]);
     setPage('home');
@@ -336,8 +383,8 @@ export function StoreProvider({ children }) {
     return created;
   }, []);
 
-  const updateProduct = useCallback(async (updated) => {
-    const result = await api.updateProduct(sanitizeObject(updated));
+  const updateProduct = useCallback(async (updated, options = {}) => {
+    const result = await api.updateProduct(sanitizeObject(updated), options);
     const saved = result.data;
     setAdminProducts(prev => prev.map(product => product.id === saved.id ? saved : product));
     if (saved.status !== 'Draft' && saved.status !== 'Out of Stock') {
@@ -346,6 +393,14 @@ export function StoreProvider({ children }) {
       setProducts(prev => prev.filter(product => product.id !== saved.id));
     }
     return saved;
+  }, []);
+
+  const publishProductDraft = useCallback(async (id, checks) => {
+    const result = await api.publishDraft(id, checks);
+    const published = result.data;
+    setAdminProducts(previous => [published, ...previous.filter(product => product.id !== published.id)]);
+    setProducts(previous => [published, ...previous.filter(product => product.id !== published.id)]);
+    return published;
   }, []);
 
   const deleteProduct = useCallback(async (id) => {
@@ -395,6 +450,7 @@ export function StoreProvider({ children }) {
 
   const cartCount = cart.reduce((sum, item) => sum + item.qty, 0);
   const cartTotal = cart.reduce((sum, item) => sum + Number(item.product.price || 0) * item.qty, 0);
+  const unreadNotificationCount = notifications.filter(notification => !notification.readAt).length;
 
   return (
     <StoreContext.Provider value={{
@@ -408,6 +464,11 @@ export function StoreProvider({ children }) {
       cartTotal,
       user,
       orders,
+      notifications,
+      unreadNotificationCount,
+      refreshNotifications,
+      markNotificationRead,
+      markAllNotificationsRead,
       page,
       pageParams,
       canGoBack: pageHistory.length > 0 || page !== 'home',
@@ -423,6 +484,7 @@ export function StoreProvider({ children }) {
       logout,
       addProduct,
       updateProduct,
+      publishProductDraft,
       deleteProduct,
       refreshAdminProducts,
       refreshAdminOrders,
